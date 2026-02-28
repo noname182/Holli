@@ -1,55 +1,27 @@
-import React, { useState } from 'react';
-import MegaMenu from './MegaMenu';
+import { Link } from '@inertiajs/react';
 
-export default function DesktopNav({ links, categories, allSubCategories, otrosLicoresData, NewProducts, handleAutoSearch }) {
-  const [activeMenu, setActiveMenu] = useState(null);
-
+export default function DesktopNav({ links }) {
   return (
-    <nav className="hidden lg:flex items-center gap-8 font-semibold text-gray-700">
+    <nav className="flex items-stretch h-16 bg-[#F5F5DC]">
       {links.map((link) => {
-        const isOtros = link.label === 'Otros licores';
-        const isNuevos = link.label === 'Nuevos';
-        
-        const currentParent = categories?.find((cat) => {
-          const labelLimpio = link.label.toLowerCase().trim();
-          const slugLimpio = cat.slug.toLowerCase().trim();
-          return slugLimpio === labelLimpio;
-        });
-
-        const displaySubCategories = isNuevos 
-          ? NewProducts 
-          : (isOtros ? otrosLicoresData : allSubCategories?.filter(sub => sub.parent_id === currentParent?.id) || []);
+        // La magia: Ziggy verifica si esta es la ruta activa por su NOMBRE
+        const isActive = route().current(link.name);
 
         return (
-          <div 
-            key={link.href}
-            className="relative"
-            onMouseEnter={() => {
-              if (isNuevos) setActiveMenu('nuevos');
-              else if (isOtros) setActiveMenu('otros');
-              else if (currentParent) setActiveMenu(currentParent.slug);
-            }}
-            onMouseLeave={() => setActiveMenu(null)}
+          <Link
+            key={link.name}
+            href={link.href}
+            className={`
+              relative flex items-center justify-center px-8 h-full
+              font-bold text-sm tracking-widest transition-all duration-300
+              ${isActive 
+                ? 'bg-verdeProfundo text-white' // Se queda en verde profundo cuando estás ahí
+                : 'text-verdeProfundo hover:bg-doradoSuave hover:text-white' // Hover dorado
+              }
+            `}
           >
-            <button 
-              onClick={(e) => handleAutoSearch(e, link.label)} 
-              className="flex items-center gap-1 py-4 hover:text-orange-600 transition-colors"
-            >
-              {link.label}
-            </button>
-
-            {activeMenu && (
-              ((isNuevos && activeMenu === 'nuevos') || 
-               (isOtros && activeMenu === 'otros') || 
-               (activeMenu === currentParent?.slug))
-            ) && displaySubCategories.length > 0 && (
-              <MegaMenu 
-                parentCategory={isNuevos ? { name: 'Novedades', slug: 'nuevos' } : (isOtros ? { name: 'Otros Licores', slug: 'otros' } : currentParent)} 
-                subCategories={displaySubCategories} 
-                type={isNuevos ? 'products' : 'categories'} 
-              />
-            )}
-          </div>
+            {link.label.toUpperCase()}
+          </Link>
         );
       })}
     </nav>

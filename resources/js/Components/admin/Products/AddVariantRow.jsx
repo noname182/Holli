@@ -1,22 +1,21 @@
 import React, { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
-import { X, Save, Droplet, DollarSign, Database, Image as ImageIcon } from 'lucide-react';
+// Cambiamos Droplet por Scale para representar peso en lugar de líquido
+import { X, Save, Scale, DollarSign, Database, Image as ImageIcon } from 'lucide-react';
 
 export default function AddVariantModal({ isOpen, onClose, product }) {
-    // 1. Estados necesarios para la imagen y el archivo
     const fileInputRef = useRef(null);
-    const [previewImage, setPreviewImage] = useState(null); // Para el visor ImageViewer
-    const [selectedFile, setSelectedFile] = useState(null); // El archivo real
+    const [previewImage, setPreviewImage] = useState(null); 
+    const [selectedFile, setSelectedFile] = useState(null); 
     
     const [formData, setFormData] = useState({
-        volume: '', // Corregido: 'volume' según tu DB
+        weight: '', // Actualizado de 'volume' a 'weight'
         price: '',
         stock: '',
     });
 
     if (!isOpen) return null;
 
-    // 2. Función para capturar y mostrar la imagen
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -24,7 +23,7 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
         setSelectedFile(file);
         const reader = new FileReader();
         reader.onload = (event) => {
-            setPreviewImage(event.target.result); // Esto alimenta al visor
+            setPreviewImage(event.target.result);
         };
         reader.readAsDataURL(file);
     };
@@ -32,11 +31,13 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // 3. Uso de FormData para enviar el archivo al servidor
         const data = new FormData();
         data.append('product_id', product.id);
-        data.append('volume', formData.volume);
-        data.append('price', formData.price.replace(',', '.')); // Conversión para DECIMAL
+        data.append('weight', formData.weight);
+        
+        const precioParaDB = formData.price.replace(',', '.');
+        data.append('price', precioParaDB);
+        
         data.append('stock', formData.stock);
         
         if (selectedFile) {
@@ -46,11 +47,11 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
         router.post(route('admin.variants.store'), data, {
             onSuccess: () => {
                 onClose();
-                setFormData({ volume: '', price: '', stock: '' });
+                setFormData({ weight: '', price: '', stock: '' });
                 setPreviewImage(null);
                 setSelectedFile(null);
             },
-            forceFormData: true // Obliga a Inertia a tratarlo como multipart/form-data
+            forceFormData: true 
         });
     };
 
@@ -65,7 +66,6 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <p className="text-sm text-gray-500 mb-4">Añadiendo para: <span className="font-bold text-indigo-600">{product.name}</span></p>
                     
-                    {/* VISOR DE IMAGEN (ImageViewer) */}
                     <div className="flex flex-col items-center mb-6">
                         <div className="w-40 h-52 bg-gray-100 rounded-3xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center relative">
                             {previewImage ? (
@@ -96,15 +96,21 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Volumen / Tamaño</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Peso (Gramos)</label>
                         <div className="relative">
-                            <Droplet className="absolute left-3 top-3 text-gray-400" size={18} />
+                            <Scale className="absolute left-3 top-3 text-gray-400" size={18} />
                             <input 
-                                name="volume" 
-                                placeholder="Ej: 750ml o 1 Litro" 
+                                type="text" // Usamos text para tener control total sobre la entrada
+                                inputMode="numeric" // Optimiza el teclado en dispositivos móviles
+                                name="weight" 
+                                placeholder="Ej: 1000 para 1kg" 
                                 className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-indigo-500" 
-                                value={formData.volume} 
-                                onChange={e => setFormData({...formData, volume: e.target.value})} 
+                                value={formData.weight} 
+                                onChange={e => {
+                                    // EXPRESIÓN REGULAR: Elimina todo lo que NO sea un número del 0 al 9
+                                    const val = e.target.value.replace(/\D/g, ''); 
+                                    setFormData({...formData, weight: val});
+                                }} 
                                 required 
                             />
                         </div>
@@ -116,13 +122,21 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
                             <div className="relative">
                                 <DollarSign className="absolute left-3 top-3 text-gray-400" size={18} />
                                 <input 
+                                    type="text"
+                                    inputMode="decimal"
                                     className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-indigo-500" 
                                     value={formData.price} 
                                     onChange={e => {
+                                        // 1. Reemplazamos cualquier punto por coma inmediatamente
                                         let val = e.target.value.replace('.', ',');
+                                        
+                                        // 2. Permitimos solo números y una única coma
                                         val = val.replace(/[^0-9,]/g, '');
+                                        
+                                        // 3. Evitamos que haya más de una coma
                                         const parts = val.split(',');
                                         if (parts.length > 2) return;
+                                        
                                         setFormData({...formData, price: val});
                                     }} 
                                     required 
@@ -137,10 +151,7 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
                                     type="text" 
                                     className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-indigo-500" 
                                     value={formData.stock} 
-                                    onChange={e => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        setFormData({...formData, stock: val});
-                                    }} 
+                                    onChange={e => setFormData({...formData, stock: e.target.value.replace(/\D/g, '')})} 
                                     required 
                                 />
                             </div>

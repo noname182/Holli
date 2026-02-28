@@ -2,52 +2,49 @@
 
 namespace App\Http\Resources;
 
-use App\Models\FeaturedProduct;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class FeaturedProductResource extends JsonResource
 {
     public function toArray($request)
     {
-        // 1. Identificamos si estamos tratando con un FeaturedProduct o un Product directamente
-        $product = $this->product ?? $this->resource;
-        
-        // 2. Seleccionamos la variante: La específica del destacado, o la primera del producto
-        $selectedVariant = ($this->resource instanceof FeaturedProduct && $this->product_variant_id)
-            ? $this->variant 
-            : $product->variants->first();
-
-        // 3. Lógica para la imagen: Ahora viene de la relación multimedia de la variante
-        // Evitamos el error "first() on null" verificando relaciones
-        $mainImage = $selectedVariant?->multimedia?->first()?->url 
-            ?? "https://via.placeholder.com/600x800";
+        $product = $this->resource;
+        $selectedVariant = $product->variants->first();
 
         return [
-            'id'                  => $product->id,
-            'featured_variant_id' => $selectedVariant?->id,
-            'category'            => $product->category->name ?? "General",
-            'name'                => $product->name,
-            'brand'               => $product->brand,
-            'content_alcohol'     => $product->alcohol_content,
+            'id'          => $product->id,
+            'name'        => $product->name,
+            'slug'        => $product->slug,
+            'description' => $product->description, 
             
-            // Datos de la variante seleccionada
-            'price'               => (float) ($selectedVariant?->price ?? 0),
-            'stock'               => (int) ($selectedVariant?->stock ?? 0),
-            'volume'              => $selectedVariant?->volume ?? 'N/A',
-            'sku'                 => $selectedVariant?->sku ?? 'S/S',
-            
-            'main_image'          => $mainImage,
-            'label'               => $this->label ?? null, // Atributo de FeaturedProduct
+            // CAMBIO 1: Carga la relación real de beneficios. 
+            // Si no hay ninguno, devolverá un array vacío [] en lugar de un texto.
+            'benefits'    => $product->benefits, 
 
-            // Transformamos todas las variantes para el selector en el frontend
-            'variants'            => $product->variants->map(fn($v) => [
-                'id'      => $v->id,
-                'volume'  => $v->volume,
-                'stock'   => $v->stock,
-                'sku'     => $v->sku,
-                'price'   => (float) $v->price,
-                'image'   => $v->multimedia->first()?->url ?? "https://via.placeholder.com/600x800",
-            ]),
+            'category'    => "Comida Natural", 
+            
+            'price'       => (float) ($selectedVariant?->price ?? 0),
+            'stock'       => (int) ($selectedVariant?->stock ?? 0),
+            'weight'      => (int) ($selectedVariant?->weight ?? 0),
+            'sku'         => $selectedVariant?->sku ?? 'S/S',
+            
+            'main_image'  => $selectedVariant?->multimedia?->first()?->url 
+                            ?? "https://via.placeholder.com/600x800",
+
+            'variants' => $product->variants->map(function($v) {
+                return [
+                    'id'         => $v->id,
+                    'sku'        => $v->sku,
+                    // CAMBIO 2: Asegúrate de que el precio sea float y el stock esté presente
+                    'price'      => (float) $v->price,
+                    'weight'     => (int) $v->weight,
+                    'stock'      => (int) ($v->stock ?? 0),
+                    'multimedia' => $v->multimedia->map(fn($m) => [
+                        'id'  => $m->id,
+                        'url' => $m->url,
+                    ]),
+                ];
+            }),
         ];
     }
 }

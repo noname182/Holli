@@ -8,6 +8,9 @@ use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Intervention\Image\Laravel\Facades\Image;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class AdminProductVariantsController extends Controller
 {
@@ -26,50 +29,118 @@ class AdminProductVariantsController extends Controller
     }
 
     // Crear nuevas variantes automáticamente
-    public function store(Request $request, Product $product)
+    public function store(Request $request)
     {
         $request->validate([
-            'combinations' => 'required|array', // array de combinaciones de ids de valores
+            'product_id' => 'required|exists:products,id',
+            'weight'     => 'required|integer|min:0',
+            'price'      => 'required|numeric|min:0',
+            'stock'      => 'required|integer|min:0',
+            'image_file' => 'nullable|image|max:5120',
         ]);
 
-        $createdVariants = [];
+        // Usamos una transacción para integridad de datos
+        return DB::transaction(function () use ($request) {
+            $product = Product::findOrFail($request->product_id);
+            
+            // Generación de SKU según tu estándar Holli
+            $recetaCode = strtoupper(substr(Str::slug($product->name), 0, 3));
+            $sku = "HOLLI-{$recetaCode}-{$request->weight}G";
 
-        foreach ($request->combinations as $combo) {
-            // Generar SKU automático: PROD-ID + hash de la combinación
-            $sku = 'SKU-' . $product->id . '-' . strtoupper(substr(md5(implode('-', $combo)), 0, 6));
+            $variant = ProductVariant::create([
+                'product_id' => $request->product_id,
+                'weight'     => $request->weight,
+                'sku'        => $sku,
+                'price'      => $request->price,
+                'stock'      => $request->stock,
+            ]);
 
-           $variant = ProductVariant::create([
-    'product_id' => $product->id,
-    'sku' => $sku,
-    'price' => $request->price !== null ? $request->price : $product->price,
-    'stock' => $request->stock ?? 0,
-]);
-            // Asociar los valores de atributos
-            $variant->values()->attach($combo);
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
 
-            $createdVariants[] = $variant->load('values.attribute');
-        }
+                // Procesamiento a WebP 600x600
+                $img = Image::read($file)
+                    ->cover(600, 600)
+                    ->toWebp(80);
 
-        return response()->json([
-            'status' => 'success',
-            'variants' => $createdVariants
-        ]);
+                // Subida a Cloudinary como Base64 para mantener el procesado
+                $upload = Cloudinary::upload("data:image/webp;base64," . base64_encode((string)$img), [
+                    'folder' => 'holli_products',
+                    'public_id' => Str::random(20)
+                ]);
+
+                $cloudinaryUrl = $upload->getSecurePath();
+
+                // Registro en product_multimedia según tu nuevo modelo
+                $multimedia = ProductMultimedia::create([
+                    'url'        => $cloudinaryUrl,
+                    'sort_order' => 1,
+                ]);
+                \Log::info("ID Multimedia creado: " . $multimedia->id); // ¿Aparece esto en el log?
+                // Vinculación en tabla pivote
+                VariantMultimedia::create([
+                    'variant_id'    => $variant->id,
+                    'multimedia_id' => $multimedia->id,
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success', 
+                'variant' => $variant->load('multimedia') // Para confirmar el vínculo
+            ]);
+        });
     }
 
     public function update(Request $request, ProductVariant $variant)
-{
-    $request->validate([
-        'price' => 'nullable|numeric|min:0', // ahora puede ser null
-        'stock' => 'required|integer|min:0',
-    ]);
+    {
+        $request->validate([
+            'weight'   => 'required|integer|min:0', // Importante para Holli
+            'price'    => 'nullable|numeric|min:0',
+            'stock'    => 'required|integer|min:0',
+            'newFile'  => 'nullable|image|max:5120', // El archivo del modal
+        ]);
 
-    $variant->update([
-        'price' => $request->price, // puede ser null
-        'stock' => $request->stock,
-    ]);
+        // 1. Actualizamos datos básicos de la variante
+        $variant->update([
+            'weight' => $request->weight,
+            'price'  => $request->price,
+            'stock'  => $request->stock,
+        ]);
 
-    return response()->json(['status' => 'success', 'variant' => $variant]);
-}
+        // 2. Si el usuario subió una foto nueva en el modal
+        if ($request->hasFile('newFile')) {
+            $file = $request->file('newFile');
+
+            // Procesamos a 600x600 WebP
+            $img = \Intervention\Image\Laravel\Facades\Image::read($file)
+                ->cover(600, 600)
+                ->toWebp(80);
+
+            // Subimos a Cloudinary
+            $upload = \CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary::upload(
+                "data:image/webp;base64," . base64_encode((string)$img),
+                ['folder' => 'holli_products']
+            );
+            $cloudinaryUrl = $upload->getSecurePath();
+
+            // 3. Actualizamos o Creamos el registro multimedia
+            $multimedia = \App\Models\ProductMultimedia::create([
+                'url'        => $cloudinaryUrl,
+                'sort_order' => 1,
+            ]);
+
+            // 4. Sincronizamos el vínculo (eliminamos el viejo y ponemos el nuevo)
+            \App\Models\VariantMultimedia::updateOrCreate(
+                ['variant_id' => $variant->id],
+                ['multimedia_id' => $multimedia->id]
+            );
+        }
+
+        return response()->json([
+            'status' => 'success', 
+            'variant' => $variant->load('multimedia') // Cargamos la foto para el "ojo"
+        ]);
+    }
 
 
 public function destroy(ProductVariant $variant)

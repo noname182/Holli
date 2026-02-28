@@ -4,24 +4,21 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
-use App\Models\FeaturedProduct;
 use App\Http\Resources\FeaturedProductResource;
-use App\Models\Evento;
 use App\Http\Resources\EventResource;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Intervention\Image\Laravel\Facades\Image;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
-
+use App\Models\ProductNutritionalBenefit;
 
 class ProductController extends Controller
 {
-
+    
 
     /**
      * sirve para obtener los productos destacados y enviarlos a la vista welcome
@@ -29,103 +26,69 @@ class ProductController extends Controller
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection 
      * AnonymousResourceCollection: Es el nombre técnico de lo que devuelve el método ::collection().
      */
-    private function getFeaturedProducts()
+
+
+
+    public function index(Request $request)
     {
-        // 1. Obtener productos destacados configurados manualmente
-        $featuredProducts = FeaturedProduct::active()
-            ->with([
-                // Cambiamos la ruta: Multimedia ahora se cuelga de las variantes
-                'product.variants.multimedia', 
-                'product.category',
-                'variant.multimedia' // Variante específica destacada con su imagen
-            ])
-            ->get();
+        $search = $request->query('search', '');
+        $perPage = 30;
 
-        if ($featuredProducts->count() < 6) {
-            $necesidad = 6 - $featuredProducts->count();
-            $existingProductIds = $featuredProducts->pluck('product_id')->toArray();
+        // 1. Obtener productos filtrados (Solo lo necesario para Holli)
+        $productCrudo = $this->getFilteredProducts($request, $perPage);
+        
+        $productCrudo->load(['variants.multimedia']);
+        // 2. Transformar productos
+        $product = FeaturedProductResource::collection($productCrudo)->additional([
+            'meta' => [
+                'total' => $productCrudo->total(),
+            ]
+        ]);
 
-            // 2. Rellenar con productos aleatorios que tengan variantes disponibles
-            $additionalProducts = Product::whereHas('variants', function ($q) {
-                    $q->where('available', 1); // Filtro correcto en la tabla product_variant
-                })
-                ->whereNotIn('id', $existingProductIds)
-                ->with([
-                    'category', 
-                    'variants' => function($q) {
-                        $q->where('available', 1)->with('multimedia'); // Traemos la foto de la variante
-                    }
-                ])
-                ->inRandomOrder()
-                ->take($necesidad)
-                ->get();
-
-            // Combinar ambos conjuntos
-            $featuredProducts = $featuredProducts->concat($additionalProducts);
-        }
-
-        return FeaturedProductResource::collection($featuredProducts);
+       
+        // 3. Retornar a la vista principal
+        return Inertia::render('Products', [
+            'search'           => $search,
+            'page'             => $productCrudo->currentPage(),
+            'product'          => $product,
+            'totalProducts'    => $productCrudo->total(),
+            'featuredProducts' => [],
+        ]);
     }
 
-    /**
-     * Recupera solo la información básica del evento activo para el banner de inicio
-     */
-    private function getFeaturedEvent()
+    public function home()
     {
-        // Buscamos el evento activo más reciente
-        $Eventos = Evento::active() // Usando el scope definido en el modelo
-            ->orderBy('fecha_inicio', 'desc')
-            ->get();
-
-        return EventResource::collection($Eventos);
+        return Inertia::render('Welcome', [
+            'featuredProducts' => [], // Aquí podrías mandar solo los más vendidos
+        ]);
     }
-
 
     public function search(Request $request)
     {
         $texto = $request->input('search');
 
-        // --- PARTE 1: Identificación de Categorías ---
-        $matchedCategories = Category::where('name', 'LIKE', "%{$texto}%")->get();
-        
-        // Si buscó una subcategoría (tiene padre), nos enfocamos en ella
-        $subCategories = $matchedCategories->filter(fn($cat) => !is_null($cat->parent_id));
-        
-        if ($subCategories->isNotEmpty()) {
-            $allRelevantIds = $subCategories->pluck('id')->toArray();
-        } else {
-            // Si buscó categoría padre, incluimos a todos sus hijos
-            $parentIds = $matchedCategories->pluck('id')->toArray();
-            $childIds = Category::whereIn('parent_id', $parentIds)->pluck('id')->toArray();
-            $allRelevantIds = array_unique(array_merge($parentIds, $childIds));
-        }
-
-        // --- PARTE 2: Búsqueda de Variantes (La tabla product_variants) ---
-        $variants = ProductVariant::with(['product.category', 'multimedia'])
+        // --- Búsqueda de Variantes basada en el SQL de Holli ---
+        $variants = ProductVariant::with([
+                'product.benefits', // Cargamos los nuevos beneficios nutricionales
+                'variantMultimedia.multimedia' // Cargamos las imágenes (vía tabla pivote variant_multimedia)
+            ])
             ->where('available', 1)
-            ->where(function($q) use ($texto, $allRelevantIds) {
-                
-                // Prioridad 1 & 2: Categorías y Subcategorías 
-                if (!empty($allRelevantIds)) {
-                    $q->whereHas('product', function($pq) use ($allRelevantIds) {
-                        $pq->whereIn('category_id', $allRelevantIds);
-                    });
-                } 
-                
-                // Prioridad 3: Coincidencia por texto (ej: "Black") 
-                $q->orWhereHas('product', function($pq) use ($texto) {
+            ->where(function($q) use ($texto) {
+                // Buscamos por nombre del producto (en la tabla products)
+                $q->whereHas('product', function($pq) use ($texto) {
                     $pq->where('name', 'LIKE', "%{$texto}%")
-                    ->orWhere('brand', 'LIKE', "%{$texto}%");
+                    ->orWhere('description', 'LIKE', "%{$texto}%");
                 })
+                // O buscamos en los campos de la variante (en product_variants)
                 ->orWhere('sku', 'LIKE', "%{$texto}%")
-                ->orWhere('volume', 'LIKE', "%{$texto}%");
+                ->orWhere('weight', 'LIKE', "%{$texto}%"); // Cambiamos 'volume' por 'weight'
             })
             ->get();
 
-        // --- PARTE 3: Agrupación ---
+        // --- Agrupación ---
+        // Como no hay categorías, agrupamos por el nombre del producto para evitar duplicados visuales
         $groupedResults = $variants->groupBy(function($variant) {
-            // Agrupamos por el nombre de la categoría del producto padre
-            return $variant->product->category->name ?? 'General';
+            return $variant->product->name;
         });
 
         return Inertia::render('ResultPage', [
@@ -139,25 +102,24 @@ class ProductController extends Controller
         $search = $request->query('search', '');
         $filters = $request->except(['search', 'page']);
 
-        // 1. Base de la Query con Eager Loading anidado
         $queryProducts = Product::with([
             'variants' => function($query) {
-                $query->where('available', 1) 
-                    ->with('multimedia');    
+                $query->where('available', 1);
+                // Si no tienes una tabla multimedia todavía, comenta la siguiente línea:
+                // ->with('multimedia'); 
             }, 
-            'category'
+            // 'category' // <--- ELIMINA O COMENTA ESTA LÍNEA si no tienes el método en el modelo
         ])
         ->whereHas('variants', function ($q) { 
             $q->where('available', 1); 
         });
 
-        // 2. Filtro por búsqueda (Nombre del producto o SKU de la variante)
         if ($search) {
             $queryProducts->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
                     ->orWhereHas('variants', function($v) use ($search) {
-                        $v->where('sku', 'like', "%$search%") // Búsqueda por SKU
-                        ->orWhere('volumen', 'like', "%$search%"); // Búsqueda por volumen
+                        $v->where('sku', 'like', "%$search%")
+                        ->orWhere('weight', 'like', "%$search%"); // CAMBIADO: volumen -> weight
                     });
             });
         }
@@ -178,219 +140,54 @@ class ProductController extends Controller
         return $paginatedProducts;
     }
 
-    public function index(Request $request)
-    {
-        $search = $request->query('search', '');
-        $filters = $request->except(['search', 'page']);
-        $perPage = 12;
-
-        // Lógica de Categorías
-        $categoryQuery = Category::whereNull('parent_id')
-            ->when($search, fn($q) => $q->where('name', 'like', "%$search%"));
-
-        $allCategories = $categoryQuery->get()->map(fn($category) => [
-            'id' => $category->id,
-            'name' => $category->name,
-            'description' => $category->description,
-            'slug' => $category->slug,
-            'image' => $category->image ?? null,
-        ]);
-
-        // Lógica de Atributos para el Sidebar
-        $filtersData = ProductAttribute::with('values')->get()->map(fn($attribute) => [
-            'id' => $attribute->id,
-            'name' => $attribute->name,
-            'values' => $attribute->values->map(fn($value) => [
-                'value' => $value->value,
-                'label' => ucfirst($value->value),
-            ])->values(),
-        ]);
-
-        // Obtener productos filtrados y paginados
-        $productCrudo = $this->getFilteredProducts($request, $perPage);
-        $product = FeaturedProductResource::collection($productCrudo)->additional([
-            'meta' => [
-                'total' => $productCrudo->total(),
-            ]
-        ]);
-
-        return Inertia::render('Welcome', [
-            'categories'       => $allCategories->forPage(1, $perPage)->values()->all(),
-            'search'           => $search,
-            'page'             => $productCrudo->currentPage(),
-            'hasMore'          => $allCategories->count() > $perPage,
-            'filtersData'      => fn() => $filtersData,
-            'activeFilters'    => $filters,
-            'product'         => $product, // Objeto paginado transformado
-            'totalProducts'    => $productCrudo->total(),
-            'featuredProducts' => $this->getFeaturedProducts(),
-            'eventos'          => $this->getFeaturedEvent()
-        ]);
-    }
+    
 
     public function show($slug, $id)
     {
-        // El slug es solo para SEO, no lo usamos para buscar el producto
-        // Esto permite que funcionen tanto URLs antiguas como nuevas
-        $product = Product::where('available', 1)
-            ->with([
-                'variants.values.attribute',
-                'multimedia.multimediaType', // Incluir el tipo de multimedia
-                'caracteristicas' // Incluir características
+        $product = Product::with([
+                'variants', // Para ver los precios según el peso (2kg, 10kg)
+                'benefits', // La nueva tabla que creamos para las huellitas verdes
+                'variantMultimedia.multimedia' // Las fotos reales del producto
             ])
             ->findOrFail($id);
 
-        return Inertia::render('Products/ShowVehicle', [
+        return Inertia::render('Products/Show', [ // Cambiamos 'ShowVehicle' a algo neutro
             'product' => [
-                'id' => $product->id,
-                'name' => $product->name,
+                'id'          => $product->id,
+                'name'        => $product->name,
                 'description' => $product->description,
-                'longDescription' => $product->longDescription,
-                'price' => $product->price,
-
-                // Multimedia organizado por tipo
-                'multimedia' => $product->multimedia->map(fn($m) => [
-                    'id' => $m->id,
-                    'url' => $m->url,
-                    'type' => $m->type ?? 'image',
-                    'multimedia_type_id' => $m->multimedia_type_id,
-                    'multimedia_type_name' => $m->multimediaType->name ?? 'General',
-                    'sort_order' => $m->sort_order,
+                
+                // Beneficios Nutricionales (Paso 3 del Plan)
+                'benefits' => $product->benefits->map(fn($b) => [
+                    'text' => $b->benefit_text,
+                    'icon' => 'huellita-verde' // Aplicando Identidad Visual
                 ]),
 
-                // Variantes
+                // Variantes de Peso
                 'variants' => $product->variants->map(fn($v) => [
-                    'id' => $v->id,
-                    'stock' => $v->stock,
-                    'sku' => $v->sku,
+                    'id'    => $v->id,
+                    'weight'=> $v->weight,
                     'price' => $v->price,
-                    'values' => $v->values->map(fn($val) => [
-                        'attribute' => $val->attribute->name,
-                        'value' => $val->value
-                    ])
+                    'stock' => $v->stock
                 ]),
-
-                // Especificaciones del producto (de la tabla products)
-                'specifications' => [
-                    'motor' => $product->motor ?? 'N/A',
-                    'potencia' => $product->potencia ?? 'N/A',
-                    'transmision' => $product->transmision ?? 'N/A',
-                    'peso' => $product->peso ?? 'N/A',
-                ],
-
-                // Características adicionales (de la tabla caracteristicas)
-                'caracteristicas' => $product->caracteristicas->map(fn($c) => [
-                    'nombre' => $c->nombre,
-                    'valor' => $c->valor
-                ])
             ]
         ]);
     }
-
-    public function getCategoriasJson(Request $request)
-    {
-        $search = $request->query('search', '');
-        $offset = (int) $request->query('offset', 0);
-        $perPage = 5;
-
-        $query = Category::whereNull('parent_id');
-
-        if ($search) {
-            $query->where('name', 'like', "%$search%");
-        }
-
-        $allCategories = $query->get()->map(function ($category) {
-            return [
-                'id' => $category->id,
-                'name' => $category->name,
-                'description' => $category->description,
-                'image' => $category->image ?? null,
-            ];
-        });
-
-        $categories = $allCategories->slice($offset, $perPage)->values()->all();
-        $hasMore = $allCategories->count() > $offset + $perPage;
-
-        return response()->json([
-            'categories' => $categories,
-            'hasMore' => $hasMore,
-        ]);
-    }
-
-    public function getCategoryDetails(Request $request, $slug)
-    {
-        $search = $request->query('search', '');
-        
-        // 1. Cargamos las categorías de forma eficiente
-        $allCategories = Category::whereNull('parent_id')
-            ->with(['children'])
-            ->get()
-            ->map(function ($category) use ($search) {
-                
-                // 2. Traemos VARIANTES directamente (no productos) para la categoría padre
-                $categoryVariants = ProductVariant::with(['product', 'multimedia'])
-                    ->where('available', 1)
-                    ->whereHas('product', function($q) use ($category, $search) {
-                        $q->where('category_id', $category->id)
-                        ->when($search, fn($sq) => $sq->where('name', 'like', "%$search%"));
-                    })->get();
-
-                // 3. Subcategorías con sus VARIANTES
-                $children = $category->children->map(function ($child) use ($search) {
-                    $childVariants = ProductVariant::with(['product', 'multimedia'])
-                        ->where('available', 1)
-                        ->whereHas('product', function($q) use ($child, $search) {
-                            $q->where('category_id', $child->id)
-                            ->when($search, fn($sq) => $sq->where('name', 'like', "%$search%"));
-                        })->get();
-
-                    return [
-                        'id' => $child->id,
-                        'name' => $child->name,
-                        'slug' => $child->slug,
-                        'description' => $child->description,
-                        'products' => $childVariants, // Ahora son variantes listas para ProductCard
-                    ];
-                });
-
-                return [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'slug' => $category->slug,
-                    'image' => $category->image, // Aseguramos que viaje la imagen
-                    'products' => $categoryVariants,
-                    'children' => $children,
-                ];
-            });
-
-        $selectedCategory = $allCategories->firstWhere('slug', $slug);
-
-        return Inertia::render('Products/CategoriesPage', [
-            'categories' => $allCategories,
-            'selectedCategory' => $selectedCategory,
-            'search' => $search,
-        ]);
-    }
-
-    //obtener productos mas destacados de hoy
-
-
-
-
-
 
     /**
      * Vista principal del administrador de productos
      */
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        // Cargamos los productos con la jerarquía completa (Solución B)
-        $products = Product::with(['variants.multimedia', 'category'])->get();
-        $categories = Category::whereNull('parent_id')->get();
+        $perPage = $request->integer('perPage', 24);
 
-        return Inertia::render('Admin/Inventory/ProductInventory', [ // <--- Nuevo nombre de archivo
-            'products' => $products,
-            'categories' => $categories
+        $productsQuery = Product::with(['variants.multimedia', 'benefits'])
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Catalog', [
+            'products' => FeaturedProductResource::collection($productsQuery)->resolve(),
         ]);
     }
 
@@ -400,183 +197,182 @@ class ProductController extends Controller
     public function updateVariantStock(Request $request, $id)
     {
         $variant = \App\Models\ProductVariant::findOrFail($id);
-        $variant->update($request->only(['stock', 'price', 'available']));
+        // Añadimos 'weight' para que el admin pueda corregir si la bolsa es de 5kg o 10kg
+        $variant->update($request->only(['stock', 'price', 'available', 'weight']));
         
-        return back()->with('message', 'Inventario actualizado');
+        return back()->with('message', 'Inventario de Holli actualizado');
     }
 
     public function store(Request $request)
     {
-        // Validamos los datos mínimos requeridos para el sistema
-        $request->validate([
-            'name' => 'required|string|max:200',
-            'category_id' => 'required|exists:categories,id',
-            'brand' => 'required|string|max:200',
-            'alcohol_content' => 'required|string|max:200',
+        // 1. Validamos (ya vimos que llegan bien en el log)
+        $validated = $request->validate([
+            'name'        => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'benefits'    => 'nullable|array', 
         ]);
 
-        return DB::transaction(function () use ($request) {
-            // 1. Crear el Producto (Padre) sin variantes
-            $product = Product::create([
-                'category_id' => $request->category_id,
-                'name' => $request->name,
-                'brand' => $request->brand,
-                'alcohol_content' => $request->alcohol_content,
-                'description' => $request->description, // Puede ser null
-                'longDescription' => null, // Forzado a null por ahora
-                'slug' => \Illuminate\Support\Str::slug($request->name), // Generación automática
-            ]);
+        // 2. Creamos el producto base
+        $product = Product::create([
+            'name'        => $validated['name'],
+            'description' => $validated['description'],
+            'slug'        => \Str::slug($validated['name']),
+        ]);
 
-            return back()->with('message', 'Producto base creado con éxito. ¡Listo para añadir variantes!');
-        });
+        // 3. REGISTRO EN LA BASE DE DATOS: Recorremos el array del log
+        if ($request->has('benefits') && is_array($request->benefits)) {
+            foreach ($request->benefits as $benefitText) {
+                if (!empty($benefitText)) {
+                    // Esta línea hace el INSERT real en MariaDB
+                    $product->benefits()->create([
+                        'benefit' => $benefitText
+                    ]);
+                }
+            }
+        }
+            return redirect()->back()->with('success', 'Producto y beneficios guardados correctamente.');
     }
+
+    
     public function update(Request $request, $id)
     {
         return DB::transaction(function () use ($request, $id) {
             $product = Product::findOrFail($id);
 
-            // 1. Actualizar datos del Producto (Padre)
+            // 1. Actualizar Producto (Nombre y Descripción)
             $product->update([
-                'category_id' => $request->category_id,
                 'name' => $request->name,
-                'brand' => $request->brand,
-                'alcohol_content' => $request->alcohol_content,
                 'description' => $request->description,
                 'slug' => \Illuminate\Support\Str::slug($request->name),
             ]);
 
-            // 2. Actualizar Variantes (Hijos)
+            // 2. Sincronizar Beneficios (Opcional según tu lógica)
+            if ($request->has('benefits')) {
+                $product->benefits()->delete(); 
+                foreach ($request->benefits as $benefitText) {
+                    if (!empty($benefitText)) {
+                        // CAMBIO: 'benefit_text' -> 'benefit'
+                        $product->benefits()->create(['benefit' => $benefitText]);
+                    }
+                }
+            }
+
+            // 3. ACTUALIZAR VARIANTES Y MULTIMEDIA (El punto crítico)
             foreach ($request->variants as $index => $variantData) {
                 $variant = \App\Models\ProductVariant::findOrFail($variantData['id']);
                 
-                // Si el frontend envió un archivo en este índice
+                // Si hay una foto nueva para esta variante en el Modal
                 if ($request->hasFile("variants.{$index}.newFile")) {
                     $file = $request->file("variants.{$index}.newFile");
+                    
+                    // Reescalado 600x600 WebP
+                    $img = Image::read($file)->cover(600, 600)->toWebp(75);
 
-                    // 1. PROCESAMIENTO: Redimensionar y convertir a WebP (600x600)
-                    $img = Image::read($file)
-                        ->cover(600, 600)
-                        ->encodeByExtension('webp', quality: 75);
-
-                    // 2. ALMACENAMIENTO: Usando la ruta técnica de tu CategoryController
                     try {
-                        $base64Image = "data:image/webp;base64," . base64_encode($img);
-
-                        $result = cloudinary()->uploadApi()->upload(
-                            $base64Image, 
-                            [
-                                'folder' => 'catalogo_licores',
-                                'format' => 'webp' 
-                            ]
-                        );
+                        $base64Image = "data:image/webp;base64," . base64_encode((string)$img);
+                        $result = cloudinary()->uploadApi()->upload($base64Image, [
+                            'folder' => 'holli_productos'
+                        ]);
 
                         if (isset($result['secure_url'])) {
-                            // 1. Buscamos la relación en la tabla puente 'variant_multimedia'
-                            $pivot = \DB::table('variant_multimedia')
-                                ->where('variant_id', $variant->id)
-                                ->first();
+                            // Buscamos si ya tiene una foto en la tabla pivote
+                            $pivot = \DB::table('variant_multimedia')->where('variant_id', $variant->id)->first();
 
                             if ($pivot) {
-                                // 2. Si existe el vínculo, vamos a 'product_multimedia' y actualizamos la URL
+                                // Si ya existía, actualizamos la URL en product_multimedia
                                 \App\Models\ProductMultimedia::where('id', $pivot->multimedia_id)
-                                    ->update(['url' => $result['secure_url']]);
-                                    
+                                    ->update([
+                                        'url' => $result['secure_url'],
+                                        'sort_order' => 1
+                                        // Eliminados 'type' y 'multimedia_type_id' por no existir en DB
+                                    ]);
                             } else {
-                                // 3. Caso borde: Si la variante no tenía foto antes, creamos el registro inicial
+                                // Si es nueva, creamos el registro multimedia
                                 $newMultimedia = \App\Models\ProductMultimedia::create([
                                     'url' => $result['secure_url'],
-                                    'type' => 'image',
-                                    'multimedia_type_id' => 1
+                                    'sort_order' => 1
                                 ]);
-
+                                
+                                // Creamos el vínculo en la pivote
                                 \DB::table('variant_multimedia')->insert([
                                     'variant_id' => $variant->id,
                                     'multimedia_id' => $newMultimedia->id
                                 ]);
                             }
-
-                            // 4. Mantenimiento: También actualizamos el campo directo por si acaso
-                            $variant->update(['image_variant_url' => $result['secure_url']]);
                         }
                     } catch (\Exception $e) {
-                        \Log::error('Error de subida Cloudinary: ' . $e->getMessage());
+                        \Log::error('Error Cloudinary Holli: ' . $e->getMessage());
                     }
                 }
 
-                // Actualizamos precios y stock (convirtiendo coma a punto)
+                // 4. Actualizar datos de la variante (Precio, Stock y PESO)
                 $variant->update([
                     'price' => str_replace(',', '.', $variantData['price']),
-                    'stock' => $variantData['stock']
+                    'stock' => $variantData['stock'],
+                    'weight' => $variantData['weight'] ?? $variant->weight 
                 ]);
             }
             
-            return back()->with('message', 'Producto y variantes actualizados con éxito');
+            return back()->with('message', 'Producto Holli actualizado con éxito');
         });
     }
 
     public function addVariant(Request $request)
     {
-        // 1. Validamos los datos (añadimos la validación de la imagen)
         $request->validate([
             'product_id' => 'required|exists:products,id',
-            'volume' => 'required|string|max:200',
-            'price' => 'required|numeric',
-            'stock' => 'required|integer',
-            'image_file' => 'nullable|image|max:2048', // Opcional, máximo 2MB
+            'weight' => 'required|integer|min:0',
+            'price'      => 'required|numeric',
+            'stock'      => 'required|integer',
+            'image_file' => 'nullable|image|max:2048', 
         ]);
 
         return DB::transaction(function () use ($request) {
-            // 2. Generación del SKU correlativo
-            $count = \App\Models\ProductVariant::where('product_id', $request->product_id)->count();
-            $newSku = "SKU-{$request->product_id}-" . ($count + 1);
-
-            // 3. Creamos la variante
+            // 1. Crear la variante (Sin columna de imagen, según tu SQL)
             $variant = \App\Models\ProductVariant::create([
                 'product_id' => $request->product_id,
-                'volume' => $request->volume,
-                'price' => $request->price,
-                'stock' => $request->stock,
-                'sku' => $newSku,
-                'available' => 1
+                'weight'     => $request->weight, 
+                'price'      => $request->price,
+                'stock'      => $request->stock,
+                'sku'        => "HOLLI-" . uniqid(), // SKU único
+                'available'  => 1
             ]);
 
-            // 4. GESTIÓN DE IMAGEN (Si se seleccionó una foto en el modal)
+            // 2. Si hay imagen, crear el vínculo en la tabla puente
             if ($request->hasFile('image_file')) {
                 try {
-                    // A. Procesamiento con Intervention Image (600x600 WebP)
+                    // Procesamiento de imagen
                     $img = \Intervention\Image\Laravel\Facades\Image::read($request->file('image_file'))
                         ->cover(600, 600)
                         ->encodeByExtension('webp', quality: 75);
 
-                    // B. Subida a Cloudinary usando la ruta API que ya te funcionó
+                    // Subida a Cloudinary
                     $result = cloudinary()->uploadApi()->upload(
                         "data:image/webp;base64," . base64_encode($img), 
-                        ['folder' => 'catalogo_licores']
+                        ['folder' => 'holli_productos']
                     );
 
                     if (isset($result['secure_url'])) {
-                        // C. Crear el registro en product_multimedia
+                        // A. Crear registro en product_multimedia
                         $multimedia = \App\Models\ProductMultimedia::create([
                             'url' => $result['secure_url'],
                             'type' => 'image',
-                            'multimedia_type_id' => 1 // Asumiendo 1 para imágenes
+                            'multimedia_type_id' => 1 
                         ]);
 
-                        // D. Vincular en la tabla puente variant_multimedia
+                        // B. ESTA ES LA CONEXIÓN: Insertar en la tabla puente variant_multimedia
+                        // Tal como indica tu Diego_bd.sql
                         \DB::table('variant_multimedia')->insert([
-                            'variant_id' => $variant->id,
+                            'variant_id'    => $variant->id,
                             'multimedia_id' => $multimedia->id
                         ]);
-
-                        // E. Actualizar el campo directo por compatibilidad
-                        $variant->update(['image_variant_url' => $result['secure_url']]);
                     }
                 } catch (\Exception $e) {
-                    \Log::error('Error al subir imagen de variante: ' . $e->getMessage());
+                    \Log::error('Error de imagen Holli: ' . $e->getMessage());
                 }
             }
 
-            return back()->with('message', 'Variante e imagen añadidas correctamente');
+            return back()->with('message', 'Presentación añadida y vinculada correctamente');
         });
     }
 
@@ -584,26 +380,30 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         return DB::transaction(function () use ($product) {
-            // 1. Obtener todas las variantes del producto para limpiar sus imágenes
-            $variants = $product->variants()->with('multimedia')->get();
+            // 1. Limpiamos las fotos de las variantes en Cloudinary
+            $variants = $product->variants()->get();
 
             foreach ($variants as $variant) {
-                foreach ($variant->multimedia as $media) {
-                    //Opcional: Borrar de Cloudinary si tienes el public_id
-                    $publicId = $this->getPublicIdFromUrl($media->url);
-                    cloudinary()->uploadApi()->destroy($publicId);
-
-                    // Borrar registro de la tabla multimedia
+                // Buscamos multimedia a través de la tabla puente de tu SQL
+                $multimedia = $variant->multimedia; 
+                
+                foreach ($multimedia as $media) {
+                    // Borrar de Cloudinary
+                    $publicId = $this->extractPublicId($media->url);
+                    if ($publicId) {
+                        cloudinary()->uploadApi()->destroy($publicId);
+                    }
                     $media->delete(); 
                 }
-                // Las relaciones en 'variant_multimedia' se borran solas si usaste cascade en la BD
-                $variant->delete();
             }
 
-            // 2. Finalmente, borrar el producto padre
+            // 2. Al borrar el producto padre, el SQL se encarga de:
+            // - variant_multimedia (Cascade)
+            // - product_variants (Cascade)
+            // - product_nutritional_benefits (Cascade)
             $product->delete();
 
-            return back()->with('message', 'Producto y todas sus presentaciones eliminados con éxito');
+            return back()->with('message', 'Alimento Holli y todos sus datos eliminados correctamente');
         });
     }
 
@@ -619,16 +419,23 @@ class ProductController extends Controller
     public function destroyVariant(\App\Models\ProductVariant $variant)
     {
         return DB::transaction(function () use ($variant) {
-            // 1. Limpiamos las relaciones multimedia de esta variante específica
+            // 1. Limpiamos las imágenes tanto en la base de datos como en Cloudinary
             foreach ($variant->multimedia as $media) {
-                $variant->multimedia()->detach($media->id);
+                // A. Extraer el ID de Cloudinary para borrar el archivo real
+                $publicId = $this->extractPublicId($media->url);
+                if ($publicId) {
+                    cloudinary()->uploadApi()->destroy($publicId);
+                }
+
+                // B. Borrar el registro de la tabla product_multimedia
                 $media->delete(); 
             }
 
-            // 2. Borrado físico de la variante en MariaDB
+            // 2. La tabla puente 'variant_multimedia' se limpia sola 
+            // gracias al ON DELETE CASCADE de tu SQL
             $variant->delete();
 
-            return back()->with('message', 'Presentación eliminada correctamente');
+            return back()->with('message', 'Presentación de alimento eliminada correctamente');
         });
     }
 }

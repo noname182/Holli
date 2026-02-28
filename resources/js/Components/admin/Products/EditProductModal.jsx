@@ -12,30 +12,31 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
     const [previewImage, setPreviewImage] = useState(null);
     const [uploadingVariantIndex, setUploadingVariantIndex] = useState(null);
 
-    const handleUrlChange = (url) => {
-        const newVariants = [...formData.variants];
-        // Guardamos la URL en el estado para previsualizar y para el envío
-        newVariants[uploadingVariantIndex].preview = url;
-        newVariants[uploadingVariantIndex].image_url = url; 
-        setFormData({ ...formData, variants: newVariants });
-        setPreviewImage(url); // Actualiza el visor en tiempo real
-    };
-
+    // Estado inicial limpio según tu DB de productos
     const [formData, setFormData] = useState({
         id: '',
         name: '',
-        brand: '',
-        category_id: '',
-        alcohol_content: '',
         description: '',
+        benefits: [], // <--- Inicializamos array de beneficios
         variants: []
     });
 
     useEffect(() => {
         if (product) {
-            setFormData({ ...product, variants: product.variants || [] });
+            setFormData({ 
+                id: product.id,
+                name: product.name,
+                description: product.description || '',
+                // Mapeamos solo el texto del beneficio para el estado local
+                benefits: product.benefits?.map(b => b.benefit) || [], 
+                variants: product.variants || [] 
+            });
         }
     }, [product]);
+
+    const handleBenefitsChange = (newBenefits) => {
+        setFormData(prev => ({ ...prev, benefits: newBenefits }));
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -55,61 +56,60 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
         const reader = new FileReader();
         reader.onload = (event) => {
             const base64Image = event.target.result;
-
-            // 1. Actualizamos el estado global de variantes para el envío final
             const newVariants = [...formData.variants];
             newVariants[uploadingVariantIndex].preview = base64Image;
             newVariants[uploadingVariantIndex].newFile = file; 
             setFormData({ ...formData, variants: newVariants });
-
-            // 2. ¡CLAVE! Actualizamos el visor para que la imagen cambie YA
             setPreviewImage(base64Image); 
         };
         reader.readAsDataURL(file);
     };
 
+    const handleClose = () => {
+        // Restauramos el formData a los valores originales del producto antes de cerrar
+        if (product) {
+            setFormData({ 
+                id: product.id,
+                name: product.name,
+                description: product.description || '',
+                benefits: product.benefits?.map(b => b.benefit) || [], 
+                variants: product.variants || [] 
+            });
+        }
+        onClose(); // Llamamos a la función original que cierra el modal
+    };
+
     const handleSubmit = () => {
-        // 1. Validación básica de ingeniería
         if (!formData.name?.trim()) return alert("El nombre es obligatorio");
 
-        // 2. Creamos el contenedor FormData para soportar archivos
         const data = new FormData();
+        data.append('_method', 'PUT'); // Spoofing para Laravel
         
-        // 3. Spoofing de método: Enviamos POST pero Laravel lo lee como PUT
-        data.append('_method', 'PUT');
-        
-        // 4. Agregamos datos del producto padre
         data.append('id', formData.id);
         data.append('name', formData.name);
-        data.append('brand', formData.brand);
-        data.append('category_id', formData.category_id);
-        data.append('alcohol_content', formData.alcohol_content);
         data.append('description', formData.description || '');
 
-        // 5. Agregamos las variantes y sus archivos nuevos
+        formData.benefits.forEach((benefit, index) => {
+            data.append(`benefits[${index}]`, benefit);
+        });
+
         formData.variants.forEach((v, index) => {
             data.append(`variants[${index}][id]`, v.id);
             data.append(`variants[${index}][sku]`, v.sku);
-            // Convertimos coma a punto para la base de datos DECIMAL
+            // Envío de precio con punto decimal
             data.append(`variants[${index}][price]`, String(v.price).replace(',', '.'));
             data.append(`variants[${index}][stock]`, v.stock);
-            data.append(`variants[${index}][volume]`, v.volume || '');
+            // CAMBIO: Enviamos weight en lugar de volume
+            data.append(`variants[${index}][weight]`, v.weight || '');
 
-            // Si el usuario seleccionó una foto nueva para esta variante, la adjuntamos
             if (v.newFile) {
                 data.append(`variants[${index}][newFile]`, v.newFile);
             }
         });
 
-        // 6. Enviamos usando router.post (con el _method PUT adentro)
         router.post(route('admin.products.update', formData.id), data, {
-            onSuccess: () => {
-                onClose();
-            },
-            onError: (errors) => {
-                console.error("Errores del servidor:", errors);
-            },
-            forceFormData: true, // Asegura que Inertia use el formato correcto para archivos
+            onSuccess: () => onClose(),
+            forceFormData: true,
             preserveScroll: true
         });
     };
@@ -120,8 +120,9 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-900 text-left">Editar Licor</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
+                    {/* Cambio de Título a Producto */}
+                    <h2 className="text-2xl font-bold text-gray-900 text-left">Editar Producto</h2>
+                    <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
                 </div>
 
                 <div className="flex px-6 border-b border-gray-100 bg-gray-50/50">
@@ -131,19 +132,29 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
 
                 <div className="flex-1 overflow-y-auto p-8">
                     {activeTab === 'general' ? (
-                        <GeneralInfoTab formData={formData} onChange={handleInputChange} />
+                        <GeneralInfoTab 
+                            formData={formData} 
+                            onChange={handleInputChange} 
+                            onBenefitsChange={handleBenefitsChange} // <--- Nueva prop
+                        />
                     ) : (
                         <InventoryTab 
                             variants={formData.variants} 
                             onVariantChange={handleVariantChange}
                             onImageClick={(index) => {
-                                setUploadingVariantIndex(index); // 1. Guardamos el índice localmente
+                                const v = formData.variants[index];
+                                console.log("el valor de v:",v);
+                                // Log militar para ver el ADN del objeto
+                                console.log("🔍 INSPECCIÓN DE VARIANTE:", v);
+                                console.log("📸 CONTENIDO MULTIMEDIA:", v.multimedia);
+
+                                // Intentamos extraer la URL de forma segura
+                                const url = v.preview || (v.multimedia && v.multimedia.length > 0 ? v.multimedia[0].url : null);
                                 
-                                // 2. Buscamos la imagen para mostrar en el visor
-                                const currentImg = formData.variants[index].preview || formData.variants[index].multimedia?.[0]?.url;
-                                setPreviewImage(currentImg);
-                                
-                                // 3. Abrimos el visor
+                                console.log("🚀 URL FINAL ENVIADA:", url);
+
+                                setUploadingVariantIndex(index);
+                                setPreviewImage(url);
                                 setShowImageViewer(true);
                             }}
                         />
@@ -151,9 +162,9 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
                 </div>
 
                 <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-4">
-                    <button onClick={onClose} className="px-8 py-3 text-gray-500 font-bold">Cancelar</button>
+                    <button onClick={handleClose} className="px-8 py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors">Cancelar</button>
                     <button 
-                        onClick={handleSubmit} // <--- ESTA ES LA CONEXIÓN CLAVE
+                        onClick={handleSubmit}
                         className="px-8 py-3 bg-gray-900 text-white rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-600 transition-all shadow-lg active:scale-95"
                     >
                         <Save size={18} /> Guardar Cambios
@@ -162,13 +173,15 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
             </div>
 
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-            <ImageViewer 
-                isOpen={showImageViewer} 
-                src={previewImage} 
-                onClose={() => setShowImageViewer(false)} 
-                /* Esta es la clave: le pasamos el disparador al hijo */
-                onFileSelect={() => fileInputRef.current.click()} 
-            />
+            
+            {showImageViewer && (
+                <ImageViewer 
+                    isOpen={showImageViewer} 
+                    src={previewImage} 
+                    onClose={() => setShowImageViewer(false)} 
+                    onFileSelect={() => fileInputRef.current.click()} 
+                />
+            )}
         </div>
     );
 }

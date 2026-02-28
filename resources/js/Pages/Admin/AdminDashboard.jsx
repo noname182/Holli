@@ -93,22 +93,7 @@ export default function AdminDashboard({ categories = [] }) {
         </div>
       </section>
 
-      {/* Secciones de Contenido (Manteniendo las refs para Órdenes y Reportes) */}
-      <main className="space-y-20 pb-20">
-        {/* Nota: La sección de Categorías sigue aquí por si decides no borrarla aún, 
-            pero el botón de arriba ya te llevará a la nueva página */}
-        <section ref={sectionRefs.categorias} className="min-h-screen bg-white rounded-[3rem] shadow-inner mx-4 py-10">
-          <CategoriesSection categories={categories} />
-        </section>
 
-        <section ref={sectionRefs.ordenes} className="min-h-screen py-10">
-          <OrdersSection />
-        </section>
-
-        <section ref={sectionRefs.reportes} className="min-h-screen py-10">
-          <ReportsSection />
-        </section>
-      </main>
     </div>
   );
 }

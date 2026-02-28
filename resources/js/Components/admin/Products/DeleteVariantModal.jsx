@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
-export default function DeleteVariantModal({ isOpen, onClose, onConfirm, variantVolume }) {
+export default function DeleteVariantModal({ isOpen, onClose, onConfirm, variantWeight }) {
     if (!isOpen) return null;
 
     return (
@@ -31,10 +31,16 @@ export default function DeleteVariantModal({ isOpen, onClose, onConfirm, variant
                             ¿Eliminar presentación?
                         </h3>
                         <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-                            Vas a borrar la variante de <span className="font-bold text-slate-900">"{variantVolume || 'Sin Volumen'}"</span>. 
+                            Vas a borrar la variante de{" "}
+                            <span className="font-bold text-slate-900">
+                                {variantWeight 
+                                    ? variantWeight >= 1000 
+                                        ? `${(variantWeight / 1000).toLocaleString('es-BO')}kg` 
+                                        : `${variantWeight}g`
+                                    : "Sin peso"}
+                            </span>. 
                             Esta acción es permanente y afectará al stock total.
                         </p>
-
                         <div className="flex gap-3">
                             <button onClick={onClose} className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-colors">
                                 Cancelar

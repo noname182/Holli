@@ -3,59 +3,56 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\ProductNutritionalBenefit;
 
 class Product extends Model
 {
+    // Solo las columnas que existen en tu tabla 'products'
     protected $fillable = [
-        'category_id',
         'name',
         'slug',
-        'alcohol_content',
-        'brand',
         'description',
-        'longDescription',
     ];
 
-    protected $casts = [
-        'available' => 'boolean',
-        // 'peso' => 'decimal:2' // Comentado porque peso puede contener texto
-    ];
-
-    public function category() {
-        return $this->belongsTo(Category::class, 'category_id');
-    }
-
-    public function variants() {
+    /**
+     * Relación con las variantes (pesos/precios)
+     * Un producto tiene muchas variantes.
+     */
+    public function variants(): HasMany
+    {
         return $this->hasMany(ProductVariant::class, 'product_id');
     }
 
-    public function caracteristicas()
+    /**
+     * Relación con los Beneficios Nutricionales (Huellitas)
+     * Un producto tiene muchos beneficios.
+     */
+    public function benefits()
     {
-        return $this->hasMany(Caracteristica::class);
+        return $this->hasMany(ProductNutritionalBenefit::class, 'product_id');
     }
 
-    //funcion para relacionar productos destacados
-    public function featuredProduct()
+    /**
+     * Relación con los anuncios asociados
+     * Según tu tabla 'product_anuncios'.
+     */
+    public function anuncios()
     {
-        return $this->hasMany(FeaturedProduct::class);
-    }
-
-    //los anuncios asociados a este producto
-    public function anuncios():BelongsToMany
-    {
-        //BelongstoMany porque es una relacion muchos a muchos
-        //la tabla intermedia es product_anuncios
-        //la llave foranea de esta tabla es product_id
-        //la llave foranea de la tabla anuncios es anuncio_id
-        //con withTimestamps para que se guarden las fechas de creacion y actualizacion
         return $this->belongsToMany(Anuncio::class, 'product_anuncios', 'product_id', 'anuncio_id')
                     ->withTimestamps();
     }
 
-    
-
-    
+    public function variantMultimedia()
+    {
+        // Relación a través de la tabla pivote que mostraste
+        return $this->hasManyThrough(
+            ProductMultimedia::class, // Tabla destino final
+            VariantMultimedia::class, // Tabla intermedia
+            'product_id',             // Llave en tabla intermedia (asumiendo que apunta al producto o variante)
+            'id',                     // Llave en tabla destino
+            'id',                     // Llave local
+            'multimedia_id'           // Llave foránea en intermedia
+        );
+    }
 }

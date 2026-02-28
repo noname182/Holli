@@ -7,11 +7,15 @@ import EditProductModal from "./EditProductModal";
 import AddProductModal from './AddProductModal';
 
 
-export default function ProductAdminManager({ products = [], categories = [] }) {
+export default function ProductAdminManager({ products, categories = [] }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
+    // 2. Extraemos la lista real de la data paginada
+    // Si products.data existe, lo usamos; si no, asumimos que es la lista vieja.
+    const productList = products?.data || products || [];
     const handleEdit = (product) => {
         setSelectedProduct(product);
         setIsEditModalOpen(true);
@@ -19,30 +23,26 @@ export default function ProductAdminManager({ products = [], categories = [] }) 
 
     const handleDelete = (id) => {
         router.delete(route('admin.products.destroy', id), {
-            onSuccess: () => {},
             preserveScroll: true
         });
     };
 
-
-    const [searchTerm, setSearchTerm] = useState("");
-
-    // Filtramos por nombre, marca o categoría
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        p.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    // 3. Limpiamos el filtro (quitamos brand y category si no los usas)
+    const filteredProducts = productList.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        // Opcional: buscar por SKU de sus variantes
+        p.variants?.some(v => v.sku.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     return (
         <div className="max-w-[1400px] mx-auto px-4">
-            {/* Barra de Acciones: Igual que en Categorías */}
+            {/* Barra de Búsqueda y Botón Agregar (Se queda igual) */}
             <div className="flex flex-wrap items-center justify-between gap-6 mb-12">
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input 
                         type="text"
-                        placeholder="Buscar un producto en particular"
+                        placeholder="Buscar por nombre o SKU..."
                         className="w-full pl-12 pr-4 py-3 bg-white/60 backdrop-blur-md rounded-2xl border border-gray-100 shadow-sm focus:ring-2 focus:ring-indigo-500 transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -57,21 +57,26 @@ export default function ProductAdminManager({ products = [], categories = [] }) 
                 </button>
             </div>
 
-            {/* Grid de Productos: Mismo formato de las categorías */}
+            {/* Grid de Productos usando filteredProducts */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
                 {filteredProducts.map(product => (
-                    <ProductAdminCard key={product.id} 
-                                        product={product}
-                                        onEdit={handleEdit}    
-                                        onDelete={handleDelete} />
+                    <ProductAdminCard 
+                        key={product.id} 
+                        product={product}
+                        onEdit={handleEdit}    
+                        onDelete={handleDelete} 
+                    />
                 ))}
             </div>
 
+            {/* Mensaje de no resultados */}
             {filteredProducts.length === 0 && (
                 <div className="text-center py-20 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-200">
-                    <p className="text-gray-400 font-medium">No se encontraron productos que coincidan con la búsqueda.</p>
+                    <p className="text-gray-400 font-medium">No se encontraron productos.</p>
                 </div>
             )}
+
+            {/* Modales (Se quedan igual) */}
             <EditProductModal 
                 isOpen={isEditModalOpen} 
                 onClose={() => setIsEditModalOpen(false)}

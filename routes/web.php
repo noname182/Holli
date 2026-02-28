@@ -24,20 +24,24 @@ use App\Http\Controllers\CategoryController;
 //para ir a PaymentPage.jsx
 Route::get('/finalizar-pago', [PaymentController::class, 'index'])->name('payment.index');
 
-//para ir a contact.jsx
+//para ir a Contact.jsx
 Route::get('/contacto', function () {
     return Inertia::render('Contact');
-})->name('contact');
+})->name('paginaContactos');
 
+//para ir a Products.jsx
+Route::get('/productos', [ProductController::class, 'index'])->name('paginaProductos');
 
-Route::get('/', [ProductController::class, 'index'])->name('welcome');
+//para el inicio
+Route::get('/', [ProductController::class, 'home'])->name('paginaInicio');
+
+//para la comidad personalizada
+Route::get('/personalizado', function () {
+    return Inertia::render('Personalized'); 
+})->name('paginaPersonalizada');
 
 //para cliente
 //Route::get('/', [FilterController::class, 'filter'])->name('filter');
-
-Route::get('/Contacto', function () {
-    return Inertia::render('Contacto');
-})->name('contacto');
 
 //para clientes
 Route::get('/buscar', [ProductController::class, 'search'])->name('products.search');
@@ -79,17 +83,18 @@ Route::prefix('admin')->group(function () {
         //para acceder desde el dashboard hacia el catalogo
         Route::get('/dashboard', [AdminControllerDashboard::class, 'index']);
         
-        Route::get('/catalogo', [CategoryController::class, 'index'])->name('admin.catalogo');
+        Route::get('/catalogo', [ProductController::class, 'adminIndex'])->name('admin.catalogo');
+        //Route::get('/catalogo', [CategoryController::class, 'index'])->name('admin.catalogo');
         //para poder guardar los cambios de modo editar
-        Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
+        //Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
         //para poder agregar una categoria
-        Route::post('admin/categories', [CategoryController::class, 'store'])->name('categories.store');
+        //Route::post('admin/categories', [CategoryController::class, 'store'])->name('categories.store');
         //para poder eliminar una categoria
-        Route::delete('/admin/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+        //Route::delete('/admin/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
 
         // routes/web.php
-        Route::get('/admin/products', [ProductController::class, 'adminIndex'])->name('admin.products.index');
+        Route::get('/admin/catalogo', [ProductController::class, 'adminIndex'])->name('admin.catalogo');
         // para poder guardar los cambios de modo editar de las variantes
         Route::put('/admin/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
         // para poder guardar un nuevo producto (sin variante)
@@ -103,38 +108,37 @@ Route::prefix('admin')->group(function () {
 
 
 
-        Route::get('/dashboard', [AdminControllerDashboard::class, 'index']);
 
 
         Route::get('/ventas/json', [VentasController::class, 'getCategoriasJson'])->name('admin.ventas.json1');
         Route::get('/ventas/search-sku', [VentasController::class, 'searchBySku']);
 
         // Categorías
-        Route::get('/categories/paginate', [AdminControllerDashboard::class, 'paginateCategories']);
-        Route::post('/categories',          [AdminControllerDashboard::class, 'storeCategory']);
-        Route::put('/categories/{category}', [AdminControllerDashboard::class, 'updateCategory']);
-        Route::delete('/categories/bulk-delete', [AdminControllerDashboard::class, 'bulkDeleteCategories']);
+        //Route::get('/categories/paginate', [AdminControllerDashboard::class, 'paginateCategories']);
+        //Route::post('/categories',          [AdminControllerDashboard::class, 'storeCategory']);
+        //Route::put('/categories/{category}', [AdminControllerDashboard::class, 'updateCategory']);
+        //Route::delete('/categories/bulk-delete', [AdminControllerDashboard::class, 'bulkDeleteCategories']);
 
 
         // Mostrar productos de una categoría
-        Route::get('/categories/{category}/products', [AdminCategoryProductsController::class, 'index'])
-            ->name('admin.categories.products');
+        //Route::get('/categories/{category}/products', [AdminCategoryProductsController::class, 'index'])
+        //    ->name('admin.categories.products');
 
         // Crear producto
-        Route::post('/products', [AdminCategoryProductsController::class, 'store'])
-            ->name('admin.products.store');
+        //Route::post('/products', [AdminCategoryProductsController::class, 'store'])
+        //    ->name('admin.products.store');
 
         // Actualizar producto
-        Route::put('/products/{product}', [AdminCategoryProductsController::class, 'update'])
-            ->name('admin.products.update');
+        //Route::put('/products/{product}', [AdminCategoryProductsController::class, 'update'])
+        //    ->name('admin.products.update');
 
         // Eliminar producto
-        Route::delete('/products/{product}', [AdminCategoryProductsController::class, 'destroy'])
-            ->name('admin.products.destroy');
+        //Route::delete('/products/{product}', [AdminCategoryProductsController::class, 'destroy'])
+        //    ->name('admin.products.destroy');
 
         // Eliminar multimedia de un producto
-        Route::delete('/products/{product}/multimedia/{media}', [AdminCategoryProductsController::class, 'destroyMultimedia'])
-            ->name('admin.products.multimedia.destroy');
+        //Route::delete('/products/{product}/multimedia/{media}', [AdminCategoryProductsController::class, 'destroyMultimedia'])
+        //    ->name('admin.products.multimedia.destroy');
 
 
         Route::post('/descontar-stock', [StockController::class, 'descontar'])
