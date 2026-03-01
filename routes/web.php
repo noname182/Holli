@@ -20,6 +20,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\FilterController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomOrderController;
 
 //para ir a PaymentPage.jsx
 Route::get('/finalizar-pago', [PaymentController::class, 'index'])->name('payment.index');
@@ -40,8 +41,16 @@ Route::get('/personalizado', function () {
     return Inertia::render('Personalized'); 
 })->name('paginaPersonalizada');
 
+//para el carrito
+Route::get('/carrito', function () {
+    return Inertia::render('Cart'); 
+})->name('cart.index');
+
 //para cliente
 //Route::get('/', [FilterController::class, 'filter'])->name('filter');
+
+//para guardar cambios de los pedidos personalizados
+Route::post('/custom-orders', [CustomOrderController::class, 'store'])->name('custom-orders.store');
 
 //para clientes
 Route::get('/buscar', [ProductController::class, 'search'])->name('products.search');
@@ -55,13 +64,7 @@ Route::get('/products/{slug}', [ProductController::class, 'getCategoryDetails'])
 
 Route::get('/ventas/json', [ProductController::class, 'getCategoriasJson'])->name('admin.ventas.json');
 
-Route::prefix('carrito')->group(function () {
-    Route::get('/data', [CartController::class, 'data'])->name('carrito.data');
-    Route::post('/add', [CartController::class, 'add'])->name('carrito.add');
-    Route::patch('/update/{rowId}', [CartController::class, 'update'])->name('carrito.update');
-    Route::delete('/remove/{rowId}', [CartController::class, 'remove'])->name('carrito.remove');
-    Route::delete('/clear', [CartController::class, 'clear'])->name('carrito.clear');
-});
+
 
 
 Route::get('/checkout', function () {

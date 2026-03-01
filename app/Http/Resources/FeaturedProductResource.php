@@ -16,29 +16,29 @@ class FeaturedProductResource extends JsonResource
             'name'        => $product->name,
             'slug'        => $product->slug,
             'description' => $product->description, 
-            
-            // CAMBIO 1: Carga la relación real de beneficios. 
-            // Si no hay ninguno, devolverá un array vacío [] en lugar de un texto.
             'benefits'    => $product->benefits, 
-
-            'category'    => "Comida Natural", 
             
+            // Datos de la primera variante (cabecera)
             'price'       => (float) ($selectedVariant?->price ?? 0),
             'stock'       => (int) ($selectedVariant?->stock ?? 0),
             'weight'      => (int) ($selectedVariant?->weight ?? 0),
             'sku'         => $selectedVariant?->sku ?? 'S/S',
             
-            'main_image'  => $selectedVariant?->multimedia?->first()?->url 
-                            ?? "https://via.placeholder.com/600x800",
+            'variants' => $product->variants->map(function($v) use ($product) {
+                $url = $v->multimedia->first()?->url ?? null;
 
-            'variants' => $product->variants->map(function($v) {
+                // 🚨 LOG DE CONTROL: Esto te dirá en storage/logs/laravel.log si el valor existe o es null
+                \Log::info("DEPURACIÓN RESOURCE - Var ID: {$v->id} | Imagen: " . ($url ?? 'NULO'));
                 return [
-                    'id'         => $v->id,
-                    'sku'        => $v->sku,
-                    // CAMBIO 2: Asegúrate de que el precio sea float y el stock esté presente
-                    'price'      => (float) $v->price,
-                    'weight'     => (int) $v->weight,
-                    'stock'      => (int) ($v->stock ?? 0),
+                    'id'        => $v->id,
+                    'baseName'  => $product->name,
+                    'price'     => (float) $v->price,
+                    'weight'    => (int) $v->weight,
+                    'stock'     => (int) ($v->stock ?? 0),
+                    'sku'       => $v->sku,
+                    'image'    => $url, // Aquí se asigna el valor
+                    
+                    // 2. Para el MODAL del Admin (el array completo que necesita para el edit)
                     'multimedia' => $v->multimedia->map(fn($m) => [
                         'id'  => $m->id,
                         'url' => $m->url,

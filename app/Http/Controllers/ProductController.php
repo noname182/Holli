@@ -34,19 +34,35 @@ class ProductController extends Controller
         $search = $request->query('search', '');
         $perPage = 30;
 
-        // 1. Obtener productos filtrados (Solo lo necesario para Holli)
         $productCrudo = $this->getFilteredProducts($request, $perPage);
         
-        $productCrudo->load(['variants.multimedia']);
-        // 2. Transformar productos
-        $product = FeaturedProductResource::collection($productCrudo)->additional([
-            'meta' => [
-                'total' => $productCrudo->total(),
-            ]
-        ]);
+        // Forzamos la carga de relaciones
+        $productCrudo->load(['variants.multimedia', 'benefits']);
 
-       
-        // 3. Retornar a la vista principal
+        // --- 🚨 INICIO DE SENSORES DE DEPURACIÓN ---
+        foreach ($productCrudo as $p) {
+            foreach ($p->variants as $v) {
+                // Log para SKU
+                if (empty($v->sku)) {
+                    \Log::error("❌ ERROR DE SKU: El producto {$p->name} (Var ID: {$v->id}) no tiene SKU cargado.");
+                } else {
+                    \Log::info("✅ SKU OK: Producto: {$p->name} | SKU: {$v->sku}");
+                }
+
+                // Log para Imágenes
+                if ($v->multimedia->isEmpty()) {
+                    \Log::error("❌ ERROR DE MULTIMEDIA: La variante {$v->id} de {$p->name} NO TIENE RELACIÓN MULTIMEDIA.");
+                } else {
+                    \Log::info("✅ FOTO OK: Variante {$v->id} tiene URL: " . $v->multimedia->first()->url);
+                }
+            }
+        }
+        // --- 🚨 FIN DE SENSORES ---
+
+        $product = FeaturedProductResource::collection($productCrudo)->additional([
+            'meta' => ['total' => $productCrudo->total()]
+        ]);
+        \Log::info("Contenido del Resource:", $product->resolve());
         return Inertia::render('Products', [
             'search'           => $search,
             'page'             => $productCrudo->currentPage(),
@@ -103,41 +119,33 @@ class ProductController extends Controller
         $filters = $request->except(['search', 'page']);
 
         $queryProducts = Product::with([
+            'benefits', // Cargamos los beneficios para que no salgan vacíos
             'variants' => function($query) {
-                $query->where('available', 1);
-                // Si no tienes una tabla multimedia todavía, comenta la siguiente línea:
-                // ->with('multimedia'); 
+                // Quitamos el filtro 'available' si no existe esa columna en tu DB
+                $query->with('multimedia'); // ACTIVADO: Esto trae las fotos de Cloudinary
             }, 
-            // 'category' // <--- ELIMINA O COMENTA ESTA LÍNEA si no tienes el método en el modelo
-        ])
-        ->whereHas('variants', function ($q) { 
-            $q->where('available', 1); 
-        });
+        ]);
 
         if ($search) {
             $queryProducts->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
                     ->orWhereHas('variants', function($v) use ($search) {
                         $v->where('sku', 'like', "%$search%")
-                        ->orWhere('weight', 'like', "%$search%"); // CAMBIADO: volumen -> weight
+                        ->orWhere('weight', 'like', "%$search%"); 
                     });
             });
         }
 
-        // 3. Filtros dinámicos (Ej: por volumen o precio)
+        // Filtros dinámicos (Asegúrate de que $key sea 'price', 'weight' o 'stock')
         foreach ($filters as $key => $value) {
-            if ($value) {
+            if ($value && in_array($key, ['price', 'weight', 'stock'])) {
                 $queryProducts->whereHas('variants', function ($q) use ($key, $value) {
-                    // Ajustamos para que coincida con las columnas de products_variants
                     $q->where($key, $value); 
                 });
             }
         }
 
-        // Paginación final
-        $paginatedProducts = $queryProducts->paginate($perPage)->withQueryString();
-
-        return $paginatedProducts;
+        return $queryProducts->paginate($perPage)->withQueryString();
     }
 
     
