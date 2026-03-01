@@ -23,7 +23,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomOrderController;
 
 //para ir a PaymentPage.jsx
-Route::get('/finalizar-pago', [PaymentController::class, 'index'])->name('payment.index');
+Route::get('/finalizar-pago', [PaymentController::class, 'index'])->name('paginaPagos');
 
 //para ir a Contact.jsx
 Route::get('/contacto', function () {
@@ -45,6 +45,8 @@ Route::get('/personalizado', function () {
 Route::get('/carrito', function () {
     return Inertia::render('Cart'); 
 })->name('cart.index');
+
+
 
 //para cliente
 //Route::get('/', [FilterController::class, 'filter'])->name('filter');
