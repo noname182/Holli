@@ -11,6 +11,7 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminControllerDashboard;
 use App\Http\Controllers\AdminCategoryProductsController;
 use App\Http\Controllers\AdminProductVariantsController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\VentasController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\FilterController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomOrderController;
+
 
 //para ir a PaymentPage.jsx
 Route::get('/finalizar-pago', [PaymentController::class, 'index'])->name('paginaPagos');
@@ -88,7 +90,16 @@ Route::prefix('admin')->group(function () {
         //para acceder desde el dashboard hacia el catalogo
         Route::get('/dashboard', [AdminControllerDashboard::class, 'index']);
         
+        //para ir al catalogo
         Route::get('/catalogo', [ProductController::class, 'adminIndex'])->name('admin.catalogo');
+
+        //para ir a configuraciones
+        Route::get('/configuraciones', [AccountController::class, 'edit'])->name('admin.account.edit');
+        //para cambiar la contraseña
+        Route::post('/configuraciones/password', [AccountController::class, 'updatePassword'])->name('admin.password.update');
+        //Actulizar configuraciones
+        Route::post('/configuraciones', [AccountController::class, 'update'])->name('admin.settings.update');
+
         //Route::get('/catalogo', [CategoryController::class, 'index'])->name('admin.catalogo');
         //para poder guardar los cambios de modo editar
         //Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
@@ -173,6 +184,19 @@ Route::prefix('admin')->group(function () {
         // Eliminar variante (DELETE)
         Route::delete('/variants/{variant}', [AdminProductVariantsController::class, 'destroy'])
             ->name('admin.variants.destroy');
+
+        
+
+        // Rutas para los otros pasos de tu plan
+        Route::get('/ordenes', [OrderController::class, 'index'])->name('admin.orders.index');
+
+
+
+
+
+
+
+
 
 
         //mostar estados y metodos de pago

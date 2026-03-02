@@ -16,5 +16,7 @@ class Account extends Model
         'account_number',
         'account_type',
         'qr_image_path',
+        'whatsapp_number',
+        'logo_path',
     ];
 }

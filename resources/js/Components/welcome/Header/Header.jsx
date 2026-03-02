@@ -1,15 +1,19 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import DesktopNav from './DesktopNav';
+import DesktopNav from './DesktopNav'; // 👈 Reintegrado
 import MobileNav from './MobileNav';
 import { useCart } from "@/Contexts/CartContext"; 
-import { ShoppingCart } from "lucide-react"; 
+import { ShoppingCart, Menu } from "lucide-react"; 
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { url } = usePage();
-  const { totalItems } = useCart(); // Extraemos el total de productos del contexto
+  const { url, props } = usePage();
+  const { totalItems } = useCart(); 
+
+  const appConfig = props['app_config'] || {};
+  const accountData = appConfig['account'] || null;
+  const logoUrl = accountData ? accountData.logo_path : null;
 
   const NAV_LINKS = [
     { name: 'paginaInicio', href: route('paginaInicio'), label: 'Inicio' },
@@ -17,6 +21,10 @@ export default function Header() {
     { name: 'paginaPersonalizada', href: route('paginaPersonalizada'), label: 'Comida personalizada' },
     { name: 'paginaContactos', href: route('paginaContactos'), label: 'Contacto' },
   ];
+
+  // Dividimos los links para el efecto "abrazo" al logo
+  const leftLinks = NAV_LINKS.slice(0, 2);
+  const rightLinks = NAV_LINKS.slice(2, 4);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -26,64 +34,54 @@ export default function Header() {
 
   return (
     <>
-      <header className="w-full sticky top-0 z-50 shadow-sm">
-        <div className="bg-white">
-          <div className="container mx-auto px-6 py-4 flex justify-between items-center relative">
-            
-            {/* --- 🛒 BOTÓN DEL CARRITO (Lado Izquierdo) --- */}
-            <div className="flex items-center">
-                <Link 
-                    href={route('cart.index')} // Cambiar a la ruta de tu carrito cuando la crees
-                    className="relative p-2 text-gray-700 hover:text-[#008542] transition-colors"
-                >
-                    <ShoppingCart size={28} strokeWidth={1.5} />
-                    
-                    {/* Burbuja del contador reactiva al LocalStorage */}
-                    {totalItems > 0 && (
-                        <span className="absolute top-0 right-0 bg-[#008542] text-white text-[10px] font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full border-2 border-white animate-in zoom-in duration-300">
-                            {totalItems}
-                        </span>
-                    )}
-                </Link>
-            </div>
-
-            {/* Logo centralizado */}
-            {!mobileMenuOpen ? (
-              <Link href="/" className="flex justify-center items-center absolute left-1/2 -translate-x-1/2 max-w-[150px]">
-                <img
-                  src="https://res.cloudinary.com/dnbklbswg/image/upload/v1767750866/pragatilogo_cw8xso.jpg"
-                  alt="Holli Logo"
-                  className="h-10 w-auto object-contain"
-                />
-              </Link>
-            ) : (
-              <div className="h-10" /> 
-            )}
-
-            {/* Botón Hamburguesa (Lado Derecho) */}
-            <div className="lg:hidden">
-              {!mobileMenuOpen && (
-                <button
-                  onClick={() => setMobileMenuOpen(true)}
-                  className="p-2 text-black"
-                >
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
+      <header className="w-full sticky top-0 z-50 shadow-sm bg-[#F5F5DC]">
+        {/* --- CONTENEDOR PRINCIPAL --- */}
+        <div className="container mx-auto px-6 h-28 flex items-center justify-center relative">
+          
+          {/* 🛒 1. BLOQUE IZQUIERDO (550px) - Alineado a la DERECHA */}
+          <div className="w-[550px] flex items-center justify-end gap-10">
+            {/* Carrito al extremo izquierdo del bloque de 550px */}
+            <Link href={route('cart.index')} className="relative p-2 text-gray-700 hover:text-[#008542]">
+              <ShoppingCart size={28} strokeWidth={1.5} />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#008542] text-white text-[10px] font-bold h-[18px] w-[18px] flex items-center justify-center rounded-full border-2 border-white">
+                  {totalItems}
+                </span>
               )}
-            </div>
-            
-            {/* Espaciador invisible para mantener el logo centrado en Desktop */}
-            <div className="hidden lg:block w-10" />
-          </div>
-        </div>
+            </Link>
 
-        {/* FILA 2: Navegación */}
-        <div className="hidden lg:block bg-[#FDFBF7] border-t border-b border-gray-100">
-          <div className="container mx-auto flex justify-center">
-            <DesktopNav links={NAV_LINKS} currentUrl={url} />
+            {/* Links Izquierda pegados al logo */}
+            <div className="hidden lg:block">
+              <DesktopNav links={leftLinks} currentUrl={url} />
+            </div>
           </div>
+
+          {/* 🐶 2. BLOQUE CENTRAL (Logo fijo) */}
+          <div className="flex-none z-50 px-6">
+            <Link href="/" className="block transform transition-transform duration-300 hover:scale-110">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo Holli" className="h-28 w-auto object-contain drop-shadow-lg" />
+              ) : (
+                <div className="h-16 w-16 bg-white border rounded-full" />
+              )}
+            </Link>
+          </div>
+
+          {/* 📞 3. BLOQUE DERECHO (550px) - Alineado a la IZQUIERDA */}
+          <div className="w-[550px] flex items-center justify-start gap-10">
+            {/* Links Derecha pegados al logo */}
+            <div className="hidden lg:block">
+              <DesktopNav links={rightLinks} currentUrl={url} />
+            </div>
+
+            {/* Botón Menú Móvil / Espaciador */}
+            <div className="lg:hidden">
+              <button onClick={() => setMobileMenuOpen(true)} className="p-2 text-black">
+                <Menu size={32} />
+              </button>
+            </div>
+          </div>
+
         </div>
       </header>
 

@@ -103,16 +103,17 @@ export const CartProvider = ({ children }) => {
 
       window.open(`https://wa.me/${numeroWhatsApp}?text=${mensaje}`, '_blank');
   };
-  
+  const totalItems = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
   return (
     <CartContext.Provider value={{ 
       cart, 
       cartCount, 
       total, 
+      totalItems,
       addToCart, 
       removeFromCart, 
       updateQuantity, 
-      clearCart 
+      clearCart
     }}>
       {children}
     </CartContext.Provider>

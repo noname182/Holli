@@ -12,7 +12,6 @@ export default function Cart() {
         const saved = localStorage.getItem('holli_cart');
         const data = saved ? JSON.parse(saved) : [];
         setRenderItems(data);
-        console.log("🔄 Datos sincronizados en vista:", data);
     }, []);
 
     useEffect(() => {

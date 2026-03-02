@@ -1,29 +1,19 @@
-import { Facebook, Instagram, Youtube, MessageSquare } from 'lucide-react';
-import { Link } from '@inertiajs/react';
+import { Facebook, Instagram, Youtube } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
 
 export default function Footer() {
+  // 1. Acceso a los datos globales (Igual que en el Header)
+  const { props } = usePage();
+  const appConfig = props['app_config'] || {};
+  const accountData = appConfig['account'] || null;
+
+  const logoUrl = accountData ? accountData.logo_path : null;
+  const whatsapp = accountData ? accountData.whatsapp_number : '';
+
   const socialLinks = [
-    { 
-      name: 'Facebook', 
-      href: '#', 
-      icon: <Facebook className="w-5 h-5" />, 
-      // Cambiado a bg-white y texto negro para que el icono se vea
-      hoverClass: 'hover:bg-blue-900' 
-    },
-    { 
-      name: 'Instagram', 
-      href: '#', 
-      icon: <Instagram className="w-5 h-5" />, 
-      // Cambiado a cian como pediste
-      hoverClass: 'hover:bg-cyan-500' 
-    },
-    { 
-      name: 'YouTube', 
-      href: '#', 
-      icon: <Youtube className="w-5 h-5" />, 
-      // Cambiado a rojo como pediste
-      hoverClass: 'hover:bg-red-600' 
-    },
+    { name: 'Facebook', href: '#', icon: <Facebook className="w-5 h-5" />, hoverClass: 'hover:bg-blue-900' },
+    { name: 'Instagram', href: '#', icon: <Instagram className="w-5 h-5" />, hoverClass: 'hover:bg-cyan-500' },
+    { name: 'YouTube', href: '#', icon: <Youtube className="w-5 h-5" />, hoverClass: 'hover:bg-red-600' },
   ];
 
   return (
@@ -31,13 +21,20 @@ export default function Footer() {
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 items-start">
           
-          {/* Columna 1: Logo Pragati (Temporal) */}
+          {/* Columna 1: Logo Dinámico (Adiós Pragati) */}
           <div className="flex justify-start">
-            <img 
-              src="https://res.cloudinary.com/dnbklbswg/image/upload/v1767750866/pragatilogo_cw8xso.jpg" 
-              alt="Pragati Logo" 
-              className="h-16 w-auto object-contain filter brightness-110"
-            />
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt="Logo Holli" 
+                className="h-48 w-auto object-contain filter brightness-110"
+              />
+            ) : (
+              /* Placeholder blanco si no hay logo */
+              <div className="h-16 w-32 bg-white/10 border border-white/20 rounded flex items-center justify-center">
+                <span className="text-[10px] text-white/30 font-black uppercase">Sin Logo</span>
+              </div>
+            )}
           </div>
 
           {/* Columna 2: HOLLI y Redes Sociales */}
@@ -51,7 +48,6 @@ export default function Footer() {
                 <a 
                   key={social.name} 
                   href={social.href} 
-                  /* Cambiamos la clase fija por la variable dinámica social.hoverClass */
                   className={`w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center transition-all duration-300 ${social.hoverClass}`}
                 >
                   {social.icon}
@@ -60,33 +56,36 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Columna 3: Navegación Estructurada */}
+          {/* Columna 3: Navegación */}
           <div>
             <h4 className="text-white font-bold mb-6 uppercase text-sm tracking-widest border-b border-[#006400] pb-2 inline-block">
               Navegación
             </h4>
             <ul className="space-y-4 text-gray-400 text-sm">
-              <li><Link href="/" className="hover:text-white transition">Inicio</Link></li>
-              <li><Link href="/productos" className="hover:text-white transition">Productos</Link></li>
-              <li><Link href="/personalizado" className="hover:text-white transition">Comida Personalizada</Link></li>
-              <li><Link href="/contacto" className="hover:text-white transition">Contacto</Link></li>
+              <li><Link href={route('paginaInicio')} className="hover:text-white transition">Inicio</Link></li>
+              <li><Link href={route('paginaProductos')} className="hover:text-white transition">Productos</Link></li>
+              <li><Link href={route('paginaPersonalizada')} className="hover:text-white transition">Comida Personalizada</Link></li>
+              <li><Link href={route('paginaContactos')} className="hover:text-white transition">Contacto</Link></li>
             </ul>
           </div>
 
-          {/* Columna 4: Contacto (Botón Original) */}
+          {/* Columna 4: Contacto Dinámico */}
           <div className="space-y-6">
             <h4 className="text-white font-bold mb-6 uppercase text-sm tracking-widest border-b border-[#006400] pb-2 inline-block">
               Atención
             </h4>
-            <Link 
-              href="#"
+            <a 
+              /* 📱 Aquí es donde se coloca la variable 'whatsapp' */
+              href={`https://wa.me/${whatsapp}`} 
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2"
             >
               Escríbenos por WhatsApp
-            </Link>
+            </a>
             <div className="p-4 border border-gray-800 rounded-lg bg-black/50">
               <p className="text-[10px] text-gray-500 leading-tight uppercase text-center">
-                Las formulaciones personalizadas se realizan bajo la información proporcionada y no reemplazan la asesoría veterinaria. [cite: 49]
+                Las formulaciones personalizadas se realizan bajo la información proporcionada y no reemplazan la asesoría veterinaria.
               </p>
             </div>
           </div>

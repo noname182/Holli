@@ -28,14 +28,20 @@ export default function AdminDashboard({ categories = [] }) {
   const menuItems = [
     { label: "Ventas", icon: "💰", color: "hover:bg-green-50", type: "link", href: "/admin/Ventas" },
     { 
-      label: "Catálogo", // Cambiamos el nombre para que sea más completo
+      label: "Catálogo", 
       icon: "📦", 
       color: "hover:bg-pink-50", 
-      type: "link",      // Cambiado de 'scroll' a 'link'
-      href: "/admin/catalogo" // Esta será la nueva ruta
+      type: "link",      
+      href: "/admin/catalogo"
     },
     { label: "Órdenes", icon: "🚚", color: "hover:bg-yellow-50", type: "scroll", ref: sectionRefs.ordenes },
-    { label: "Reportes", icon: "📊", color: "hover:bg-blue-50", type: "scroll", ref: sectionRefs.reportes },
+    { 
+      label: "Configuraciones", 
+      icon: "⚙️",             
+      color: "hover:bg-blue-50", 
+      type: "link", 
+      href: "/admin/configuraciones" 
+    },
   ];
 
   return (

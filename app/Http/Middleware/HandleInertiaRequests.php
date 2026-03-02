@@ -2,31 +2,33 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Category;
+use App\Models\Account; // Importamos el modelo de tu tabla BNB
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
     /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
+     * Define las propiedades compartidas por defecto.
      */
-    
+    public function share(Request $request): array
+    {
+        return array_merge(parent::share($request), [
+            // 🚀 DATOS GLOBALES DE LA APP (Paso 1)
+            'app_config' => [
+                'account' => Account::first(), // Trae logo, qr, bnb y whatsapp
+            ],
+            // Datos del usuario (si está logueado)
+            'auth' => [
+                'user' => $request->user(),
+            ],
+        ]);
+    }
 }
