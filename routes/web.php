@@ -104,10 +104,10 @@ Route::prefix('admin')->group(function () {
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         
         // Ver detalle (vía API para el Modal)
-        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('admin.orders.show');
         
         // Actualizar estado
-        Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+        Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('admin.orders.update');
         
         // Eliminar orden
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');

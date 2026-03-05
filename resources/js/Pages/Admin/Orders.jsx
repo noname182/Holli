@@ -6,9 +6,7 @@ export default function Orders({ orders }) {
     // Estado para filtrar entre 'Compra' y 'Personalizado'
     const [view, setView] = useState('compra');
 
-    const updateStatus = (id, statusId) => {
-        router.patch(route('admin.orders.update', id), { status_id: statusId });
-    };
+ 
 
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showModal, setShowModal] = useState(false);
@@ -16,6 +14,23 @@ export default function Orders({ orders }) {
     const openDetails = (order) => {
         setSelectedOrder(order);
         setShowModal(true);
+    };
+
+    const updateStatus = (id, statusId) => {
+        // Enviamos la petición al backend
+        router.patch(route('admin.orders.update', id), { 
+            status_id: statusId 
+        }, {
+            preserveScroll: true,
+        });
+    };
+
+    const handleTypeChange = (newType) => {
+        // Usamos router.get para pedirle al controlador los datos del nuevo tipo
+        router.get(route('admin.orders.index'), 
+            { type: newType }, 
+            { preserveState: true, replace: true }
+        );
     };
     return (
         <div className="min-h-screen bg-[#F8F9FA]">
@@ -76,8 +91,10 @@ export default function Orders({ orders }) {
                                         <select 
                                             value={order.status_id}
                                             onChange={(e) => updateStatus(order.id, e.target.value)}
-                                            className={`border-none rounded-full px-6 pr-10 py-2 text-[14px] font-black uppercase tracking-tighter cursor-pointer transition-all appearance-none text-center ${
-                                                order.status_id === 1 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                                            className={`border-none rounded-full px-6 pr-10 py-2 text-[14px] font-black uppercase tracking-tighter cursor-pointer transition-all appearance-none text-center shadow-sm ${
+                                                order.status_id === 1 ? 'bg-amber-100 text-amber-700' : 
+                                                order.status_id === 2 ? 'bg-green-100 text-green-700' : 
+                                                'bg-blue-100 text-blue-700'
                                             }`}
                                         >
                                             <option value="1">Pendiente</option>

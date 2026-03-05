@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Mail\OrderDeliveredAdmin;
 use App\Mail\OrderDeliveredCustomer;
+use App\Models\CustomOrder;
 
 class OrderController extends Controller
 {
@@ -79,22 +80,33 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['status', 'items.variant.product']);
+        $view = $request->query('view', 'compra'); // Por defecto compras directas
+        $search = $request->search;
 
-        if ($request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('id', 'LIKE', "%$search%")
-                  ->orWhere('customer_name', 'LIKE', "%$search%")
-                  ->orWhere('customer_phone', 'LIKE', "%$search%");
-            });
+        if ($view === 'personalizado') {
+            // Consultamos la tabla custom_orders
+            $query = CustomOrder::query();
+            
+            if ($search) {
+                $query->where('tutor_name', 'LIKE', "%$search%")
+                    ->orWhere('pet_name', 'LIKE', "%$search%");
+            }
+            
+            $data = $query->orderByDesc('id')->paginate(10);
+        } else {
+            // Consultamos la tabla orders normal con sus productos
+            $query = Order::with(['status', 'items.variant.product']);
+            
+            if ($search) {
+                $query->where('customer_name', 'LIKE', "%$search%");
+            }
+            
+            $data = $query->orderByDesc('id')->paginate(10);
         }
 
-        $orders = Order::with(['status', 'items.variant.product'])->orderByDesc('id')->paginate(10);
-
-        // Cambiamos response()->json por Inertia::render
         return \Inertia\Inertia::render('Admin/Orders', [
-            'orders' => $orders,
+            'orders' => $data,
+            'currentView' => $view,
             'filters' => $request->only(['search'])
         ]);
     }
@@ -116,12 +128,14 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $request->validate([
-            'status_id' => 'required|exists:order_statuses,id',
+            'status_id' => 'required|exists:order_status,id', // Validamos contra tu tabla singular
         ]);
 
-        $order->update($request->only(['status_id']));
+        $order->update([
+            'status_id' => $request->status_id
+        ]);
 
-        // Redirigimos de vuelta para refrescar los datos en Inertia
-        return back()->with('success', 'Estado actualizado correctamente');
+        // Importante: 'back()' refresca los datos en la vista de React automáticamente
+        return back()->with('success', 'Estado de la orden actualizado.');
     }
 }
