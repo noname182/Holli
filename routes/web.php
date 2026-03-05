@@ -50,6 +50,10 @@ Route::get('/carrito', function () {
 //para ir desde de paymentpage para el checkout
 Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
 
+//para poder ver detalles de un product card
+Route::get('/productos/{product}', [ProductController::class, 'showDetailed'])->name('products.showDetailed');
+
+
 //para cliente
 //Route::get('/', [FilterController::class, 'filter'])->name('filter');
 
@@ -112,8 +116,10 @@ Route::prefix('admin')->group(function () {
         // Eliminar orden
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
 
-
+        //para ver y editar los pedidos personalizados
         Route::patch('/custom-orders/{customOrder}', [CustomOrderController::class, 'updateStatus'])->name('admin.orders.updateCustomStatus');
+        
+        
         //Route::get('/catalogo', [CategoryController::class, 'index'])->name('admin.catalogo');
         //para poder guardar los cambios de modo editar
         //Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');

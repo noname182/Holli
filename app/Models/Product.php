@@ -55,4 +55,11 @@ class Product extends Model
             'multimedia_id'           // Llave foránea en intermedia
         );
     }
+
+
+    public function nutritionalBenefits()
+    {
+        // Un producto tiene muchos beneficios nutricionales
+        return $this->hasMany(ProductNutritionalBenefit::class, 'product_id');
+    }
 }

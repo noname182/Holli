@@ -429,5 +429,20 @@ class ProductController extends Controller
             return back()->with('message', 'Presentación de alimento eliminada correctamente');
         });
     }
+
+    public function showDetailed($id)
+    {
+        // Cargamos la variante con su producto, beneficios y su multimedia
+        $variant = \App\Models\ProductVariant::with([
+            'product.nutritionalBenefits', 
+            'multimedia' // Asegúrate de tener esta relación definida en tu modelo Variant
+        ])->findOrFail($id);
+
+        return Inertia::render('ProductShow', [
+            'variant' => $variant
+        ]);
+    }
+
+
 }
 

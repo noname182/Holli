@@ -60,7 +60,7 @@ export default function ProductCard({ variant }) {
 
                     <div className="mt-auto space-y-2">
                         <Link 
-                            href={route('paginaProductos', variant.id)} 
+                            href={route('products.showDetailed', variant.id)} 
                             className="w-full block text-center border border-[#008542] text-[#008542] text-[10px] py-2 rounded-lg font-bold uppercase hover:bg-green-50 transition-colors"
                         >
                             Ver Detalle
