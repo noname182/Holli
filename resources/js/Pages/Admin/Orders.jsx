@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AdminHeader from "@/Components/admin/AdminHeader.jsx";
 import { Head, router } from '@inertiajs/react';
-import OrderDetailModal from "@/Components/admin/orders/OrderDetailModal";
+import OrderDetailModal from "@/Components/admin/Orders/OrderDetailModal";
 
 export default function Orders({ orders, currentType }) {
     const [selectedOrder, setSelectedOrder] = useState(null);
