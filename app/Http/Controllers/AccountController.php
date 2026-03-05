@@ -84,12 +84,20 @@ class AccountController extends Controller
             if ($request->hasFile('qr_image')) {
                 try {
                     $file = $request->file('qr_image');
-                    // Reescalado 600x600 WebP
-                    $img = Image::read($file)->cover(600, 600)->toWebp(75);
-                    $base64Image = "data:image/webp;base64," . base64_encode((string)$img);
+                    
+                    // ❌ QUITAMOS: cover(600, 600) -> causa distorsión al estirar o encoger píxeles.
+                    // ❌ QUITAMOS: toWebp(75) -> la compresión al 75% borra los bordes del QR.
+                    
+                    // ✅ PROPUESTA: Solo convertir a PNG sin cambiar tamaño para mantener la rejilla exacta.
+                    $img = Image::read($file)->toPng(); 
+                    $base64Image = "data:image/png;base64," . base64_encode((string)$img);
 
                     $result = cloudinary()->uploadApi()->upload($base64Image, [
-                        'folder' => 'payment_qrs'
+                        'folder' => 'payment_qrs',
+                        'format' => 'png', // Forzamos formato sin pérdida
+                        'transformation' => [
+                            'quality' => 'auto:best' // Le decimos a Cloudinary que no escatime en calidad
+                        ]
                     ]);
 
                     if (isset($result['secure_url'])) {
@@ -99,7 +107,6 @@ class AccountController extends Controller
                     \Log::error('Error Cloudinary QR: ' . $e->getMessage());
                 }
             }
-
             // 3. ACTUALIZAR TEXTOS (BNB y WhatsApp)
             $account->update([
                 'owner_name' => $request->owner_name,

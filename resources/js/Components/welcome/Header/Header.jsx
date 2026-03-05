@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import DesktopNav from './DesktopNav'; // 👈 Reintegrado
+import DesktopNav from './DesktopNav'; 
 import MobileNav from './MobileNav';
 import { useCart } from "@/Contexts/CartContext"; 
 import { ShoppingCart, Menu } from "lucide-react"; 

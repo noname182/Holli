@@ -14,28 +14,24 @@ class Order extends Model
 
     protected $table = 'orders';
  
-   protected $fillable = [
-    'customer_name',
-    'customer_phone',
-    'customer_email',
-    'status_id',
-    'payment_method_id',
-    'total',
-];
+    protected $fillable = [
+        'status_id', 
+        'total', 
+        'customer_name', 
+        'customer_phone', 
+        'customer_address', 
+        'customer_address_reference', 
+        'payment_method_id', 
+        'customer_email',
+    ];
     protected $casts = [
         'total' => 'decimal:2',
-        'delivery_date' => 'date',
     ];
 
     // Relaciones
     public function status()
     {
-        return $this->belongsTo(OrderStatus::class, 'status_id');
-    }
-
-    public function paymentMethod()
-    {
-        return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
+        return $this->belongsTo(OrderStatus::class, 'status_id', 'id');
     }
 
     public function items()

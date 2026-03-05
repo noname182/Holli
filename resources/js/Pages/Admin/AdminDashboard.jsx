@@ -26,22 +26,28 @@ export default function AdminDashboard({ categories = [] }) {
 
   // Configuración de los accesos rápidos del panel
   const menuItems = [
-    { label: "Ventas", icon: "💰", color: "hover:bg-green-50", type: "link", href: "/admin/Ventas" },
-    { 
-      label: "Catálogo", 
-      icon: "📦", 
-      color: "hover:bg-pink-50", 
-      type: "link",      
-      href: "/admin/catalogo"
-    },
-    { label: "Órdenes", icon: "🚚", color: "hover:bg-yellow-50", type: "scroll", ref: sectionRefs.ordenes },
-    { 
-      label: "Configuraciones", 
-      icon: "⚙️",             
-      color: "hover:bg-blue-50", 
-      type: "link", 
-      href: "/admin/configuraciones" 
-    },
+      // 🗑️ 'Ventas' eliminado porque ahora centralizarás todo en 'Órdenes'
+      { 
+        label: "Catálogo", 
+        icon: "📦", 
+        color: "hover:bg-pink-50", 
+        type: "link",      
+        href: "/admin/catalogo"
+      },
+      { 
+        label: "Órdenes", 
+        icon: "🚚", 
+        color: "hover:bg-yellow-50", 
+        type: "link", // 👈 Cambiado de 'scroll' a 'link'
+        href: route('admin.orders.index') // 👈 Usamos la ruta definida en web.php
+      },
+      { 
+        label: "Configuraciones", 
+        icon: "⚙️",             
+        color: "hover:bg-blue-50", 
+        type: "link", 
+        href: "/admin/configuraciones" 
+      },
   ];
 
   return (

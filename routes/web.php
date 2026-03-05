@@ -5,7 +5,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\SocialController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminControllerDashboard;
@@ -48,7 +47,8 @@ Route::get('/carrito', function () {
     return Inertia::render('Cart'); 
 })->name('cart.index');
 
-
+//para ir desde de paymentpage para el checkout
+Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
 
 //para cliente
 //Route::get('/', [FilterController::class, 'filter'])->name('filter');
@@ -75,8 +75,7 @@ Route::get('/checkout', function () {
     return Inertia::render('checkout');
 })->name('checkout');
 
-// Endpoint para crear pedido
-Route::post('/orders/store', [PedidosController::class, 'store'])->name('orders.store');
+
 
 
 //para administrador
@@ -99,7 +98,19 @@ Route::prefix('admin')->group(function () {
         Route::post('/configuraciones/password', [AccountController::class, 'updatePassword'])->name('admin.password.update');
         //Actulizar configuraciones
         Route::post('/configuraciones', [AccountController::class, 'update'])->name('admin.settings.update');
+        
 
+        // Listado principal
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        
+        // Ver detalle (vía API para el Modal)
+        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        
+        // Actualizar estado
+        Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+        
+        // Eliminar orden
+        Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
         //Route::get('/catalogo', [CategoryController::class, 'index'])->name('admin.catalogo');
         //para poder guardar los cambios de modo editar
         //Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');

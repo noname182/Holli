@@ -31,6 +31,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
+        \Log::info("TEST: El log ya funciona y los IDs son: ", $request->all());
         $search = $request->query('search', '');
         $perPage = 30;
 
@@ -39,30 +40,11 @@ class ProductController extends Controller
         // Forzamos la carga de relaciones
         $productCrudo->load(['variants.multimedia', 'benefits']);
 
-        // --- 🚨 INICIO DE SENSORES DE DEPURACIÓN ---
-        foreach ($productCrudo as $p) {
-            foreach ($p->variants as $v) {
-                // Log para SKU
-                if (empty($v->sku)) {
-                    \Log::error("❌ ERROR DE SKU: El producto {$p->name} (Var ID: {$v->id}) no tiene SKU cargado.");
-                } else {
-                    \Log::info("✅ SKU OK: Producto: {$p->name} | SKU: {$v->sku}");
-                }
-
-                // Log para Imágenes
-                if ($v->multimedia->isEmpty()) {
-                    \Log::error("❌ ERROR DE MULTIMEDIA: La variante {$v->id} de {$p->name} NO TIENE RELACIÓN MULTIMEDIA.");
-                } else {
-                    \Log::info("✅ FOTO OK: Variante {$v->id} tiene URL: " . $v->multimedia->first()->url);
-                }
-            }
-        }
-        // --- 🚨 FIN DE SENSORES ---
+       
 
         $product = FeaturedProductResource::collection($productCrudo)->additional([
             'meta' => ['total' => $productCrudo->total()]
         ]);
-        \Log::info("Contenido del Resource:", $product->resolve());
         return Inertia::render('Products', [
             'search'           => $search,
             'page'             => $productCrudo->currentPage(),
@@ -267,6 +249,7 @@ class ProductController extends Controller
 
             // 3. ACTUALIZAR VARIANTES Y MULTIMEDIA (El punto crítico)
             foreach ($request->variants as $index => $variantData) {
+
                 $variant = \App\Models\ProductVariant::findOrFail($variantData['id']);
                 
                 // Si hay una foto nueva para esta variante en el Modal
