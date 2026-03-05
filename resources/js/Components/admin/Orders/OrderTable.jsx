@@ -14,36 +14,35 @@ export default function OrderTable({ orders, view, updateStatus, openDetails }) 
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                     {orders.data.map(order => (
-                        <tr key={order.id} className="group hover:bg-green-50/30 transition-all">
-                            <td className="p-6 text-[20px] font-bold text-gray-800">
-                                {view === 'personalizado' ? order.tutor_name : order.customer_name}
+                        <tr key={order.id} className="group hover:bg-green-50/30 transition-all border-b border-gray-50">
+                            <td className="p-6">
+                                <p className="text-[18px] font-black text-gray-800 leading-none uppercase tracking-tighter">
+                                    {order.tutor_name}
+                                </p>
+                                <p className="text-[11px] text-gray-400 mt-1 font-bold">🆔 ID: #{order.id}</p>
                             </td>
-                            <td className="p-6 font-black text-[#008542] text-lg">
-                                {view === 'personalizado' ? (
-                                    <span className="text-gray-400 text-sm">🐶 {order.pet_name}</span>
-                                ) : (
-                                    <>{order.total} <span className="text-[12px] font-bold text-gray-400">BOB</span></>
-                                )}
+                            <td className="p-6 font-black text-[#008542]">
+                                <span className="flex items-center gap-2">
+                                    🐾 <span className="uppercase tracking-widest text-xs">{order.pet_name}</span>
+                                </span>
                             </td>
                             <td className="p-6">
                                 <select 
-                                    value={order.status_id || 1}
+                                    value={order.status} 
                                     onChange={(e) => updateStatus(order.id, e.target.value)}
-                                    className={`border-none rounded-full px-6 pr-10 py-2 text-[14px] font-black uppercase tracking-tighter cursor-pointer transition-all appearance-none text-center shadow-sm ${
-                                        order.status_id === 1 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                                    }`}
+                                    className="border-none rounded-full px-6 pr-10 py-2 text-[12px] font-black uppercase appearance-none bg-amber-100 text-amber-700 shadow-sm transition-all focus:ring-2 focus:ring-amber-300"
                                 >
-                                    <option value="1">Pendiente</option>
-                                    <option value="2">Pagado</option>
-                                    <option value="3">Enviado</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="procesando">Procesando</option>
+                                    <option value="completado">Completado</option>
                                 </select>
                             </td>
                             <td className="p-6 text-center">
                                 <button 
                                     onClick={() => openDetails(order)} 
-                                    className="bg-gray-50 group-hover:bg-[#008542] text-gray-400 group-hover:text-white px-5 py-2 rounded-xl text-[16px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                    className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#008542] transition-all shadow-md"
                                 >
-                                    Ver Detalle
+                                    Ver Expediente
                                 </button>
                             </td>
                         </tr>

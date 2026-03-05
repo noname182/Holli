@@ -111,6 +111,9 @@ Route::prefix('admin')->group(function () {
         
         // Eliminar orden
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
+
+        Route::patch('/custom-orders/{customOrder}', [CustomOrderController::class, 'updateStatus'])->name('admin.orders.updateCustomStatus');
         //Route::get('/catalogo', [CategoryController::class, 'index'])->name('admin.catalogo');
         //para poder guardar los cambios de modo editar
         //Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');

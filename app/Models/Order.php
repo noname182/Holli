@@ -21,7 +21,6 @@ class Order extends Model
         'customer_phone', 
         'customer_address', 
         'customer_address_reference', 
-        'payment_method_id', 
         'customer_email',
     ];
     protected $casts = [

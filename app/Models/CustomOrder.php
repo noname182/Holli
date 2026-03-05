@@ -34,7 +34,7 @@ class CustomOrder extends Model
         'food_format',
         'kibble_size',
         'monthly_quantity',
-        'status', // Valor por defecto suele ser 'pendiente'
+        'status_id', 
     ];
 
     /**
@@ -54,4 +54,10 @@ class CustomOrder extends Model
     protected $attributes = [
         'status' => 'pendiente',
     ];
+
+    public function status()
+    {
+        // Conecta con la tabla order_status
+        return $this->belongsTo(OrderStatus::class, 'status_id');
+    }
 }

@@ -80,34 +80,20 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $view = $request->query('view', 'compra'); // Por defecto compras directas
-        $search = $request->search;
+        $type = $request->query('type', 'compra');
 
-        if ($view === 'personalizado') {
-            // Consultamos la tabla custom_orders
-            $query = CustomOrder::query();
-            
-            if ($search) {
-                $query->where('tutor_name', 'LIKE', "%$search%")
-                    ->orWhere('pet_name', 'LIKE', "%$search%");
-            }
-            
-            $data = $query->orderByDesc('id')->paginate(10);
+        if ($type === 'personalizado') {
+            // Obtenemos datos de la tabla custom_orders
+            $orders = CustomOrder::with(['status'])->orderByDesc('id')->paginate(10);
         } else {
-            // Consultamos la tabla orders normal con sus productos
-            $query = Order::with(['status', 'items.variant.product']);
-            
-            if ($search) {
-                $query->where('customer_name', 'LIKE', "%$search%");
-            }
-            
-            $data = $query->orderByDesc('id')->paginate(10);
+            // Obtenemos compras directas con sus productos
+            $orders = \App\Models\Order::with(['status', 'items.variant.product'])
+                    ->orderByDesc('id')->paginate(10);
         }
 
         return \Inertia\Inertia::render('Admin/Orders', [
-            'orders' => $data,
-            'currentView' => $view,
-            'filters' => $request->only(['search'])
+            'orders' => $orders,
+            'currentType' => $type
         ]);
     }
 

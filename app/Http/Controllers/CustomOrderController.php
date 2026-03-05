@@ -6,7 +6,7 @@ use App\Models\CustomOrder;
 use Illuminate\Http\Request;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\Redirect;
-
+use Illuminate\Support\Facades\Log; 
 class CustomOrderController extends Controller
 {
     public function store(Request $request)
@@ -48,11 +48,31 @@ class CustomOrderController extends Controller
             }
         }
 
+        
         // 3. Crear el registro en MariaDB
         // Tu modelo CustomOrder ya tiene los $casts para health_conditions y restrictions
         CustomOrder::create($data);
 
         // 4. Retornar éxito para activar el Paso 5 en React
         return Redirect::back()->with('success', '¡Pedido Holli recibido!');
+    }
+    public function updateStatus(Request $request, CustomOrder $customOrder)
+    {
+        Log::info('Iniciando actualización de estado personalizado', [
+            'custom_order_id' => $customOrder->id,
+            'status_id_recibido' => $request->status_id,
+            'todo_el_request' => $request->all()
+        ]);
+        // Validamos que llegue un número válido
+        $request->validate([
+            'status_id' => 'required|integer|exists:order_status,id',
+        ]);
+
+        // Guardamos en la columna que renombraste
+        $customOrder->update([
+            'status_id' => $request->status_id
+        ]);
+
+        return redirect()->back();// Esto refresca los datos en React automáticamente
     }
 }
