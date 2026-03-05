@@ -20,18 +20,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $account = \DB::table('accounts')->first();
         return array_merge(parent::share($request), [
-            // 🚀 DATOS GLOBALES DE LA APP (Paso 1)
+            // DATOS GLOBALES DE LA APP (
             'app_config' => [
                 'account' => Account::first(), // Trae logo, qr, bnb y whatsapp
             ],
-            // Datos del usuario (si está logueado)
+            // Datos del usuario 
             'auth' => [
                 'user' => $request->user(),
             ],
             'flash' => [
                 'order_id' => $request->session()->get('flash.order_id'),
             ],
+            'appLogo' => $account ? $account->logo_path : null,
         ]);
     }
 }

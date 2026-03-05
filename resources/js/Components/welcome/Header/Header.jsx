@@ -34,7 +34,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="w-full sticky top-0 z-50 shadow-sm bg-[#F5F5DC]">
+      <header className="w-full sticky top-0 z-50 shadow-sm bg-[#dec390]">
         {/* --- CONTENEDOR PRINCIPAL --- */}
         <div className="container mx-auto px-6 h-28 flex items-center justify-center relative">
           

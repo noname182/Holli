@@ -5,7 +5,6 @@ import Pagination from "@/Components/welcome/Pagination";
 // resources/js/Pages/Products.jsx
 
 export default function Products({ product }) {
-    // 1. Transformamos la estructura: Producto -> Variantes Individuales
     const allVariants = product?.data?.flatMap(p => 
         p.variants.map(v => ({
             ...v, 

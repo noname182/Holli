@@ -1,9 +1,21 @@
 import React, { useState } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import { useCart } from "@/Contexts/CartContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProductCard({ variant }) {
+    const [isVisiting, setIsVisiting] = useState(false);
+
+    const handleSeeDetail = () => {
+        if (isVisiting) return; // Doble protección
+        
+        setIsVisiting(true);
+        // Usamos router.visit para manejar el redireccionamiento
+        router.visit(route('products.showDetailed', variant.id), {
+            onFinish: () => setIsVisiting(false)
+        });
+    };
+
     const getFormattedWeight = (grams) => {
         if (grams >= 1000) {
             return `${(grams / 1000).toString().replace('.', ',')}kg`;
@@ -59,16 +71,23 @@ export default function ProductCard({ variant }) {
                     </div>
 
                     <div className="mt-auto space-y-2">
-                        <Link 
-                            href={route('products.showDetailed', variant.id)} 
-                            className="w-full block text-center border border-[#008542] text-[#008542] text-[10px] py-2 rounded-lg font-bold uppercase hover:bg-green-50 transition-colors"
+                        <button 
+                            onClick={handleSeeDetail}
+                            disabled={isVisiting}
+                            className="w-full block text-center border-2 border-[#008542] text-[#008542] text-[10px] py-2 rounded-lg font-bold uppercase hover:bg-green-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait"
                         >
-                            Ver Detalle
-                        </Link>
+                            {isVisiting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <div className="animate-spin h-3 w-3 border-2 border-[#008542] border-t-transparent rounded-full" />
+                                    Cargando...
+                                </span>
+                            ) : 'Ver Detalle'}
+                        </button>
 
                         <button 
-                            onClick={() => setIsModalOpen(true)} // Abre el modal central
-                            className="w-full bg-[#008542] hover:bg-[#006d35] text-white text-[10px] py-2 rounded-lg font-bold uppercase transition-colors"
+                            onClick={() => setIsModalOpen(true)}
+                            disabled={isVisiting} // Bloqueado si ya se está navegando
+                            className="w-full bg-[#008542] hover:bg-[#006d35] text-white text-[10px] py-2 rounded-lg font-bold uppercase transition-colors disabled:opacity-50"
                         >
                             Agregar
                         </button>

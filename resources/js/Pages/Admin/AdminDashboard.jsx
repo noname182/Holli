@@ -37,8 +37,8 @@ export default function AdminDashboard({ categories = [] }) {
         label: "Órdenes", 
         icon: "🚚", 
         color: "hover:bg-yellow-50", 
-        type: "link", // 👈 Cambiado de 'scroll' a 'link'
-        href: route('admin.orders.index') // 👈 Usamos la ruta definida en web.php
+        type: "link", 
+        href: route('admin.orders.index') 
       },
       { 
         label: "Configuraciones", 

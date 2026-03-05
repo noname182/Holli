@@ -49,7 +49,7 @@ export default function Personalized() {
         post(route('custom-orders.store'), {
             forceFormData: true, // Crucial para que el archivo PDF se envíe correctamente
             onSuccess: () => {
-                // Si Laravel guarda todo en MariaDB con éxito, saltamos al Paso 5
+               
                 setStep(5);
             },
             onError: (errors) => {
@@ -86,23 +86,27 @@ export default function Personalized() {
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <input type="text" placeholder="Tu nombre (Tutor)" 
-                                            className="rounded-xl border-gray-100 bg-gray-50 focus:ring-[#008542] p-4 transition-all" 
+                                            className="rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                                             onChange={e => setData('tutor_name', e.target.value)} value={data.tutor_name} />
                                             
                                         <input type="text" placeholder="WhatsApp" 
-                                            className="rounded-xl border-gray-100 bg-gray-50 focus:ring-[#008542] p-4 transition-all" 
+                                            className="rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
+                                            onChange={e => setData('whatsapp_number', e.target.value)} value={data.whatsapp_number} />
+
+                                        <input type="text" placeholder="WhatsApp" 
+                                            className="rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                                             onChange={e => setData('whatsapp_number', e.target.value)} value={data.whatsapp_number} />
 
                                         <input type="text" placeholder="Nombre de la mascota" 
-                                            className="rounded-xl border-gray-100 bg-gray-50 focus:ring-[#008542] p-4 transition-all" 
+                                            className="rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                                             onChange={e => setData('pet_name', e.target.value)} value={data.pet_name} />
                                         
                                         <input type="text" placeholder="Edad (ej: 3 años, 6 meses...)" 
-                                            className="rounded-xl border-gray-100 bg-gray-50 focus:ring-[#008542] p-4 transition-all" 
+                                            className="rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                                             onChange={e => setData('pet_age', e.target.value)} value={data.pet_age} />
                                             
                                         <input type="text" placeholder="Peso de la mascota (especifica kg y gramos)" 
-                                            className="rounded-xl border-gray-100 bg-gray-50 focus:ring-[#008542] p-4 transition-all" 
+                                            className="rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                                             onChange={e => setData('pet_weight', e.target.value)} value={data.pet_weight} />
                                     </div>
 
@@ -110,7 +114,7 @@ export default function Personalized() {
                                         <label className="text-sm font-bold text-gray-700 ml-1">Comportamiento y actividad</label>
                                         <textarea 
                                             placeholder="Cuéntanos cómo es su día a día (ej: corre 2 horas en el parque, es muy tranquilo en casa...)"
-                                            className="w-full rounded-2xl border-gray-100 bg-gray-50 focus:ring-[#008542] h-32 p-4"
+                                            className="w-full rounded-2xl border-gray-100 bg-gray-100 focus:ring-[#008542] h-32 p-4"
                                             onChange={e => setData('activity_level', e.target.value)}
                                         />
                                     </div>
