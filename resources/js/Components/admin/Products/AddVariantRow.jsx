@@ -1,15 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
-// Cambiamos Droplet por Scale para representar peso en lugar de líquido
 import { X, Save, Scale, DollarSign, Database, Image as ImageIcon } from 'lucide-react';
 
 export default function AddVariantModal({ isOpen, onClose, product }) {
+    const [loading, setLoading] = useState(false);
     const fileInputRef = useRef(null);
     const [previewImage, setPreviewImage] = useState(null); 
     const [selectedFile, setSelectedFile] = useState(null); 
     
     const [formData, setFormData] = useState({
-        weight: '', // Actualizado de 'volume' a 'weight'
+        weight: '', 
         price: '',
         stock: '',
     });
@@ -30,7 +30,12 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+        if (loading) return;
+        if (!formData.price || !formData.weight) {
+            alert("El precio y el peso son obligatorios");
+            return;
+        }
+        setLoading(true);
         const data = new FormData();
         data.append('product_id', product.id);
         data.append('weight', formData.weight);
@@ -51,6 +56,7 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
                 setPreviewImage(null);
                 setSelectedFile(null);
             },
+            onFinish: () => setLoading(false),
             forceFormData: true 
         });
     };
@@ -158,8 +164,25 @@ export default function AddVariantModal({ isOpen, onClose, product }) {
                         </div>
                     </div>
 
-                    <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 mt-4 shadow-lg shadow-indigo-100">
-                        <Save size={20} /> Guardar Variante
+                    <button 
+                        type="submit" 
+                        disabled={loading} // Desactiva el clic físicamente
+                        className={`w-full py-4 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 mt-4 shadow-lg 
+                            ${loading 
+                                ? 'bg-gray-400 cursor-not-allowed shadow-none' 
+                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}
+                    >
+                        {loading ? (
+                            <>
+                                {/* Spinner animado para indicar carga de imagen */}
+                                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                                Guardando variante...
+                            </>
+                        ) : (
+                            <>
+                                <Save size={20} /> Guardar Variante
+                            </>
+                        )}
                     </button>
                 </form>
             </div>

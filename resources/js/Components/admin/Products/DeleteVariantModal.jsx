@@ -1,18 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react'; //
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 export default function DeleteVariantModal({ isOpen, onClose, onConfirm, variantWeight }) {
+    // 1. Creamos el estado local de carga
+    const [isDeleting, setIsDeleting] = useState(false);
+
     if (!isOpen) return null;
 
+    // 2. Nueva función para manejar el clic
+    const handleConfirmClick = () => {
+        if (isDeleting) return;
+        
+        setIsDeleting(true); 
+
+        // Llamamos a la función de confirmación que viene del padre
+        onConfirm({
+            onFinish: () => setIsDeleting(false),
+        });
+    };
+    
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
                 <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    onClick={!isDeleting ? onClose : null}
                     className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                 />
 
@@ -27,9 +40,7 @@ export default function DeleteVariantModal({ isOpen, onClose, onConfirm, variant
                             <AlertTriangle size={32} />
                         </div>
 
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">
-                            ¿Eliminar presentación?
-                        </h3>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">¿Eliminar presentación?</h3>
                         <p className="text-sm text-slate-500 mb-8 leading-relaxed">
                             Vas a borrar la variante de{" "}
                             <span className="font-bold text-slate-900">
@@ -41,22 +52,36 @@ export default function DeleteVariantModal({ isOpen, onClose, onConfirm, variant
                             </span>. 
                             Esta acción es permanente y afectará al stock total.
                         </p>
+
                         <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-colors">
+                            <button 
+                                onClick={onClose} 
+                                disabled={isDeleting} 
+                                className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-2xl font-bold disabled:opacity-50"
+                            >
                                 Cancelar
                             </button>
+                            
+                            {/* 3. BOTÓN ACTUALIZADO CON SPINNER */}
                             <button 
-                                onClick={onConfirm}
-                                className="flex-1 py-3 px-4 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 shadow-lg shadow-red-200 transition-all flex items-center justify-center gap-2"
+                                onClick={handleConfirmClick}
+                                disabled={isDeleting}
+                                className={`flex-1 py-3 px-4 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 
+                                    ${isDeleting ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200'}`}
                             >
-                                <Trash2 size={18} /> Eliminar
+                                {isDeleting ? (
+                                    <>
+                                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={18} /> Eliminar
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
-
-                    <button onClick={onClose} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-50 rounded-full">
-                        <X size={20} />
-                    </button>
                 </motion.div>
             </div>
         </AnimatePresence>

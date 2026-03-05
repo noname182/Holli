@@ -10,7 +10,7 @@ export default function Welcome() {
     return (
         <Layout title="Inicio">
             {/* --- SECCIÓN HERO DINÁMICA --- */}
-            <div className="relative min-h-screen bg-[#fcfaf7] overflow-hidden flex items-center">
+            <div className="relative min-h-screen bg-[#b19149] overflow-hidden flex items-center">
                 {/* Decoración de fondo */}
                 <div className="absolute top-[-10%] right-[-5%] text-[300px] opacity-[0.03] pointer-events-none rotate-12">🐾</div>
                 

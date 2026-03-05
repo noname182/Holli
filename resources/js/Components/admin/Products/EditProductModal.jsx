@@ -11,13 +11,13 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
     const [showImageViewer, setShowImageViewer] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
     const [uploadingVariantIndex, setUploadingVariantIndex] = useState(null);
-
+    const [loading, setLoading] = useState(false);
     // Estado inicial limpio según tu DB de productos
     const [formData, setFormData] = useState({
         id: '',
         name: '',
         description: '',
-        benefits: [], // <--- Inicializamos array de beneficios
+        benefits: [],
         variants: []
     });
 
@@ -27,7 +27,6 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
                 id: product.id,
                 name: product.name,
                 description: product.description || '',
-                // Mapeamos solo el texto del beneficio para el estado local
                 benefits: product.benefits?.map(b => b.benefit) || [], 
                 variants: product.variants || [] 
             });
@@ -66,7 +65,6 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
     };
 
     const handleClose = () => {
-        // Restauramos el formData a los valores originales del producto antes de cerrar
         if (product) {
             setFormData({ 
                 id: product.id,
@@ -76,14 +74,15 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
                 variants: product.variants || [] 
             });
         }
-        onClose(); // Llamamos a la función original que cierra el modal
+        onClose(); 
     };
 
     const handleSubmit = () => {
+        if (loading) return;
         if (!formData.name?.trim()) return alert("El nombre es obligatorio");
-
+        setLoading(true);
         const data = new FormData();
-        data.append('_method', 'PUT'); // Spoofing para Laravel
+        data.append('_method', 'PUT'); 
         
         data.append('id', formData.id);
         data.append('name', formData.name);
@@ -99,7 +98,7 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
             // Envío de precio con punto decimal
             data.append(`variants[${index}][price]`, String(v.price).replace(',', '.'));
             data.append(`variants[${index}][stock]`, v.stock);
-            // CAMBIO: Enviamos weight en lugar de volume
+            
             data.append(`variants[${index}][weight]`, v.weight || '');
 
             if (v.newFile) {
@@ -109,6 +108,7 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
 
         router.post(route('admin.products.update', formData.id), data, {
             onSuccess: () => onClose(),
+            onFinish: () => setLoading(false),
             forceFormData: true,
             preserveScroll: true
         });
@@ -143,15 +143,8 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
                             onVariantChange={handleVariantChange}
                             onImageClick={(index) => {
                                 const v = formData.variants[index];
-                                console.log("el valor de v:",v);
-                                // Log militar para ver el ADN del objeto
-                                console.log("🔍 INSPECCIÓN DE VARIANTE:", v);
-                                console.log("📸 CONTENIDO MULTIMEDIA:", v.multimedia);
-
-                                // Intentamos extraer la URL de forma segura
+                              
                                 const url = v.preview || (v.multimedia && v.multimedia.length > 0 ? v.multimedia[0].url : null);
-                                
-                                console.log("🚀 URL FINAL ENVIADA:", url);
 
                                 setUploadingVariantIndex(index);
                                 setPreviewImage(url);
@@ -165,9 +158,23 @@ export default function ProductEditModal({ isOpen, onClose, product }) {
                     <button onClick={handleClose} className="px-8 py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors">Cancelar</button>
                     <button 
                         onClick={handleSubmit}
-                        className="px-8 py-3 bg-gray-900 text-white rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-600 transition-all shadow-lg active:scale-95"
+                        disabled={loading} // Bloqueo físico del botón
+                        className={`px-8 py-3 text-white rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 
+                            ${loading 
+                                ? 'bg-gray-400 cursor-not-allowed opacity-80' 
+                                : 'bg-gray-900 hover:bg-indigo-600 shadow-indigo-200'}`}
                     >
-                        <Save size={18} /> Guardar Cambios
+                        {loading ? (
+                            <>
+                                {/* Spinner para indicar que se están subiendo archivos o procesando datos */}
+                                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                Actualizando...
+                            </>
+                        ) : (
+                            <>
+                                <Save size={18} /> Guardar Cambios
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

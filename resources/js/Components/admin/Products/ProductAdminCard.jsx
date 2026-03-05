@@ -11,26 +11,41 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    // --- ESTADOS PARA VARIANTES ---
     const [isDelVariantModalOpen, setIsDelVariantModalOpen] = useState(false);
     const [variantToDelete, setVariantToDelete] = useState(null);
+    const [productToDelete, setProductToDelete] = useState(null);
 
-    // Calculamos el stock total sumando todas las variantes
+
     const totalStock = product.variants?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0;
 
     // Función que ejecuta la eliminación física en MariaDB
-    const handleConfirmVariantDelete = () => {
+    const handleConfirmVariantDelete = (options = {}) => {
         if (variantToDelete) {
             router.delete(route('admin.variants.destroy', variantToDelete.id), {
+                ...options, 
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsDelVariantModalOpen(false);
                     setVariantToDelete(null);
+                },
+                onError: () => {
+                    alert("Hubo un error al eliminar la variante");
                 }
             });
         }
     };
-    
+    const handleConfirmProductDelete = (options = {}) => {
+        if (productToDelete) {
+            router.delete(route('admin.products.destroy', productToDelete.id), {
+                ...options, 
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsDeleteModalOpen(false);
+                    setProductToDelete(null);
+                }
+            });
+        }
+    };
     return (
         <div className="bg-white rounded-[32px] border border-gray-400 shadow-sm hover:shadow-xl transition-all overflow-hidden group flex flex-col">
             <div className="p-6 flex-1"> {/* flex-1 para empujar el panel hacia abajo si es necesario */}
@@ -45,7 +60,7 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
                             </p>
                         ) : (
                             // Espaciador invisible para mantener la altura si no hay descripción
-                            <div className="mt-2 text-sm invisible">Sin descripción disponible</div>
+                            <div className="mt-2 text-sm text-gray-500 italic">Sin descripción</div>
                         )}
                     </div>
 
@@ -57,7 +72,10 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
                             <Edit size={18} />
                         </button>
                         <button 
-                            onClick={() => setIsDeleteModalOpen(true)} 
+                            onClick={() => {
+                                setProductToDelete(product); 
+                                setIsDeleteModalOpen(true);
+                            }} 
                             className="p-2.5 text-gray-500 hover:text-red-900 hover:bg-gray-300 rounded-xl transition-all active:scale-95"
                         >
                             <Trash2 size={18} />
@@ -91,7 +109,7 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
 
                 <button 
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-full mt-4 py-2 flex items-center justify-center gap-2 text-xs font-bold text-gray-400 hover:text-indigo-600 hover:bg-gray-50 rounded-xl transition-all"
+                    className="w-full mt-4 py-2 flex items-center justify-center gap-2 text-xs font-bold text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-xl transition-all"
                 >
                     {isExpanded ? 'Ocultar detalles' : 'Mostrar detalles'}
                     <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
@@ -113,7 +131,7 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
                     >
                         <div className="p-4 space-y-4"> {/* Aumentamos el espaciado vertical */}
                             
-                            {/* 1. Lista de Pesos y Precios */}
+                            {/* Lista de Pesos y Precios */}
                             <div className="space-y-2">
                                 {product.variants?.map((variant) => (
                                     <div key={variant.id} className="bg-white p-3 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
@@ -145,9 +163,9 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
                                 ))}
                             </div>
 
-                            {/* 2. SECCIÓN DE BENEFICIOS (NUEVO UBICACIÓN) */}
-                            <div className="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100">
-                                <p className="text-[10px] uppercase font-black text-indigo-400 mb-3 ml-1 tracking-wider">
+                            {/* SECCIÓN DE BENEFICIOS (NUEVO UBICACIÓN) */}
+                            <div className="bg-indigo-200 rounded-2xl p-4 border border-indigo-100">
+                                <p className="text-[10px] uppercase font-black text-blue mb-3 ml-1 tracking-wider">
                                     Beneficios Nutricionales
                                 </p>
                                 {product.benefits && product.benefits.length > 0 ? (
@@ -160,14 +178,14 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-[11px] text-gray-400 italic ml-1">Ningún beneficio registrado</p>
+                                    <p className="text-[12px] text-gray-700 italic ml-1">Ningún beneficio registrado</p>
                                 )}
                             </div>
 
                             {/* 3. Botón para agregar variante */}
                             <button 
                                 onClick={() => setIsVariantModalOpen(true)}
-                                className="w-full py-3 border-2 border-dashed border-indigo-200 rounded-2xl text-indigo-600 font-bold text-xs hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2"
+                                className="w-full py-3 border-2 border-indigo-300 rounded-2xl text-indigo-700 font-bold text-xs hover:bg-indigo-100 hover:border-indigo-300 transition-all flex items-center justify-center gap-2"
                             >
                                 + Nueva Presentación
                             </button>
@@ -185,10 +203,7 @@ export default function ProductAdminCard({ product, onEdit, onDelete }) {
             <DeleteProductModal 
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => {
-                    onDelete(product.id);
-                    setIsDeleteModalOpen(false);
-                }}
+                onConfirm={handleConfirmProductDelete}
                 productName={product.name}
             />
 

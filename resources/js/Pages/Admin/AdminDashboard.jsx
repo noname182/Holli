@@ -4,9 +4,7 @@ import { Head, Link } from "@inertiajs/react";
 
 // Componentes
 import AdminHeader from "@/Components/admin/AdminHeader.jsx";
-import CategoriesSection from "@/Components/admin/Categorias/CategoriesSection.jsx";
-import OrdersSection from "@/Components/admin/Orders/OrdersSection.jsx";
-import ReportsSection from "@/Components/admin/Reportes/ReportsSection";
+
 
 export default function AdminDashboard({ categories = [] }) {
   // Referencias para el scroll suave

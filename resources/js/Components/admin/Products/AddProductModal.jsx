@@ -6,9 +6,10 @@ export default function AddProductModal({ isOpen, onClose }) {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        benefits: [], // Array para almacenar los strings de beneficios
+        benefits: [], 
     });
-
+    const [loading, setLoading] = useState(false);
+    
     const [currentBenefit, setCurrentBenefit] = useState('');
 
     if (!isOpen) return null;
@@ -25,7 +26,7 @@ export default function AddProductModal({ isOpen, onClose }) {
                 ...prev,
                 benefits: [...prev.benefits, currentBenefit.trim()]
             }));
-            setCurrentBenefit(''); // Limpiar el input individual
+            setCurrentBenefit(''); 
         }
     };
 
@@ -36,15 +37,15 @@ export default function AddProductModal({ isOpen, onClose }) {
             benefits: prev.benefits.filter((_, i) => i !== index)
         }));
     };
-
+    
     const handleSubmit = (e) => {
         e.preventDefault();
-
+        if (loading) return;
         if (!formData.name) {
             alert("El nombre del producto es obligatorio");
             return;
         }
-
+        setLoading(true);
         router.post(route('admin.products.store'), formData, {
             onSuccess: () => {
                 onClose();
@@ -54,6 +55,7 @@ export default function AddProductModal({ isOpen, onClose }) {
                     benefits: [],
                 });
             },
+            onFinish: () => setLoading(false),
             preserveScroll: true
         });
     };
@@ -155,8 +157,25 @@ export default function AddProductModal({ isOpen, onClose }) {
                         <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
                             Cancelar
                         </button>
-                        <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
-                            <Save size={20} /> Crear Producto
+                        <button 
+                            type="submit" 
+                            disabled={loading} // Evita la interacción física mientras carga
+                            className={`flex-1 py-4 text-white rounded-2xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 
+                                ${loading 
+                                    ? 'bg-gray-400 cursor-not-allowed opacity-70' 
+                                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
+                        >
+                            {loading ? (
+                                <>
+                                    {/* Un pequeño spinner para dar feedback profesional */}
+                                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                                    Guardando...
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={20} /> Crear Producto
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

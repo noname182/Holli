@@ -13,8 +13,6 @@ export default function ProductAdminManager({ products, categories = [] }) {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
 
-    // 2. Extraemos la lista real de la data paginada
-    // Si products.data existe, lo usamos; si no, asumimos que es la lista vieja.
     const productList = products?.data || products || [];
     const handleEdit = (product) => {
         setSelectedProduct(product);
@@ -27,7 +25,6 @@ export default function ProductAdminManager({ products, categories = [] }) {
         });
     };
 
-    // 3. Limpiamos el filtro (quitamos brand y category si no los usas)
     const filteredProducts = productList.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         // Opcional: buscar por SKU de sus variantes
@@ -36,7 +33,7 @@ export default function ProductAdminManager({ products, categories = [] }) {
 
     return (
         <div className="max-w-[1400px] mx-auto px-4">
-            {/* Barra de Búsqueda y Botón Agregar (Se queda igual) */}
+            {/* Barra de Búsqueda y Botón Agregar */}
             <div className="flex flex-wrap items-center justify-between gap-6 mb-12">
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -57,7 +54,7 @@ export default function ProductAdminManager({ products, categories = [] }) {
                 </button>
             </div>
 
-            {/* Grid de Productos usando filteredProducts */}
+            {/* Grid de Productos */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
                 {filteredProducts.map(product => (
                     <ProductAdminCard 
@@ -81,7 +78,6 @@ export default function ProductAdminManager({ products, categories = [] }) {
                 isOpen={isEditModalOpen} 
                 onClose={() => setIsEditModalOpen(false)}
                 product={selectedProduct}
-                categories={categories}
             />
             <AddProductModal 
                 isOpen={isAddModalOpen} 

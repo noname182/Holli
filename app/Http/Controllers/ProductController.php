@@ -248,54 +248,55 @@ class ProductController extends Controller
             }
 
             // 3. ACTUALIZAR VARIANTES Y MULTIMEDIA (El punto crítico)
-            foreach ($request->variants as $index => $variantData) {
+            if ($request->has('variants') && is_array($request->variants)) { //
+                foreach ($request->variants as $index => $variantData) {
 
-                $variant = \App\Models\ProductVariant::findOrFail($variantData['id']);
-                
-                // Si hay una foto nueva para esta variante en el Modal
-                if ($request->hasFile("variants.{$index}.newFile")) {
-                    $file = $request->file("variants.{$index}.newFile");
+                    $variant = \App\Models\ProductVariant::findOrFail($variantData['id']);
                     
-                    // Reescalado 600x600 WebP
-                    $img = Image::read($file)->cover(600, 600)->toWebp(75);
+                    // Si hay una foto nueva para esta variante en el Modal
+                    if ($request->hasFile("variants.{$index}.newFile")) {
+                        $file = $request->file("variants.{$index}.newFile");
+                        
+                        // Reescalado 600x600 WebP
+                        $img = Image::read($file)->cover(600, 600)->toWebp(75);
 
-                    try {
-                        $base64Image = "data:image/webp;base64," . base64_encode((string)$img);
-                        $result = cloudinary()->uploadApi()->upload($base64Image, [
-                            'folder' => 'holli_productos'
-                        ]);
+                        try {
+                            $base64Image = "data:image/webp;base64," . base64_encode((string)$img);
+                            $result = cloudinary()->uploadApi()->upload($base64Image, [
+                                'folder' => 'holli_productos'
+                            ]);
 
-                        if (isset($result['secure_url'])) {
-                            // Buscamos si ya tiene una foto en la tabla pivote
-                            $pivot = \DB::table('variant_multimedia')->where('variant_id', $variant->id)->first();
+                            if (isset($result['secure_url'])) {
+                                // Buscamos si ya tiene una foto en la tabla pivote
+                                $pivot = \DB::table('variant_multimedia')->where('variant_id', $variant->id)->first();
 
-                            if ($pivot) {
-                                // Si ya existía, actualizamos la URL en product_multimedia
-                                \App\Models\ProductMultimedia::where('id', $pivot->multimedia_id)
-                                    ->update([
+                                if ($pivot) {
+                                    // Si ya existía, actualizamos la URL en product_multimedia
+                                    \App\Models\ProductMultimedia::where('id', $pivot->multimedia_id)
+                                        ->update([
+                                            'url' => $result['secure_url'],
+                                            'sort_order' => 1
+                                            // Eliminados 'type' y 'multimedia_type_id' por no existir en DB
+                                        ]);
+                                } else {
+                                    // Si es nueva, creamos el registro multimedia
+                                    $newMultimedia = \App\Models\ProductMultimedia::create([
                                         'url' => $result['secure_url'],
                                         'sort_order' => 1
-                                        // Eliminados 'type' y 'multimedia_type_id' por no existir en DB
                                     ]);
-                            } else {
-                                // Si es nueva, creamos el registro multimedia
-                                $newMultimedia = \App\Models\ProductMultimedia::create([
-                                    'url' => $result['secure_url'],
-                                    'sort_order' => 1
-                                ]);
-                                
-                                // Creamos el vínculo en la pivote
-                                \DB::table('variant_multimedia')->insert([
-                                    'variant_id' => $variant->id,
-                                    'multimedia_id' => $newMultimedia->id
-                                ]);
+                                    
+                                    // Creamos el vínculo en la pivote
+                                    \DB::table('variant_multimedia')->insert([
+                                        'variant_id' => $variant->id,
+                                        'multimedia_id' => $newMultimedia->id
+                                    ]);
+                                }
                             }
+                        } catch (\Exception $e) {
+                            \Log::error('Error Cloudinary Holli: ' . $e->getMessage());
                         }
-                    } catch (\Exception $e) {
-                        \Log::error('Error Cloudinary Holli: ' . $e->getMessage());
                     }
                 }
-
                 // 4. Actualizar datos de la variante (Precio, Stock y PESO)
                 $variant->update([
                     'price' => str_replace(',', '.', $variantData['price']),
@@ -396,6 +397,25 @@ class ProductController extends Controller
 
             return back()->with('message', 'Alimento Holli y todos sus datos eliminados correctamente');
         });
+    }
+
+    private function extractPublicId($url)
+    {
+        // Ejemplo de URL: https://res.cloudinary.com/demo/image/upload/v12345/productos/perro_holli.jpg
+        // El publicId sería "productos/perro_holli"
+        
+        $path = parse_url($url, PHP_URL_PATH);
+        if (!$path) return null;
+
+        $parts = explode('/', $path);
+        $filename = end($parts); // perro_holli.jpg
+        
+        // Eliminamos la extensión para obtener el ID limpio
+        $publicId = pathinfo($filename, PATHINFO_FILENAME);
+        
+        // Si tus imágenes están en una carpeta dentro de Cloudinary (ej: "productos/"), 
+        // debes incluir el nombre de la carpeta antes del ID.
+        return $publicId; 
     }
 
     private function getPublicIdFromUrl($url)
