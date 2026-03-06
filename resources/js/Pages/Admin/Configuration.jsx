@@ -1,7 +1,7 @@
 import React from 'react';
 import AdminHeader from "@/Components/admin/AdminHeader.jsx";
-import { Head, useForm } from '@inertiajs/react';
-import { Save, Lock, Landmark, QrCode , Smartphone} from 'lucide-react';
+import { Head, useForm, Link } from '@inertiajs/react';
+import { Save, Lock, Landmark, QrCode , Smartphone, ArrowLeft} from 'lucide-react';
 
 export default function Configuration({ account }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -10,8 +10,8 @@ export default function Configuration({ account }) {
         account_number: account?.account_number || '',
         account_type: account?.account_type || '',
         qr_image: null,
-        whatsapp_number: account?.whatsapp_number || '', // Nuevo
-        logo_image: null, // Nuevo
+        whatsapp_number: account?.whatsapp_number || '', 
+        logo_image: null, 
     });
 
     const passwordForm = useForm({
@@ -49,6 +49,19 @@ export default function Configuration({ account }) {
 
             {/* 2. El contenido va AFUERA del Header para que sea visible */}
             <main className="p-4 sm:p-8 max-w-7xl mx-auto">
+
+                <div className="mb-6">
+                    <Link 
+                        href="/admin/dashboard" 
+                        className="inline-flex items-center gap-2 text-gray-500 hover:text-black font-bold transition-colors group"
+                    >
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 group-hover:bg-gray-100 transition-all">
+                            <ArrowLeft size={20} />
+                        </div>
+                        <span className="text-sm uppercase tracking-widest">Volver al Panel</span>
+                    </Link>
+                </div>
+
                 <h1 className="text-3xl font-black text-gray-800 mb-8 uppercase tracking-tighter">
                     Configuraciones Generales
                 </h1>
@@ -94,12 +107,25 @@ export default function Configuration({ account }) {
 
                             <div className="p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                                 <label className="block text-xs font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
-                                    <QrCode size={16} /> Actualizar Imagen QR
+                                    <QrCode size={16} /> QR de Pago Actual
                                 </label>
+                                
+                                {account?.qr_image_path ? (
+                                    <div className="mb-4 flex justify-center">
+                                        <img 
+                                            src={account.qr_image_path} 
+                                            alt="QR Actual" 
+                                            className="max-h-48 rounded-lg shadow-md border border-gray-200"
+                                        />
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-400 italic mb-4 text-center">No hay un QR configurado actualmente</p>
+                                )}
+
                                 <input 
                                     type="file"
                                     onChange={e => setData('qr_image', e.target.files[0])}
-                                    className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-[#008542]"
+                                    className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-[#008542] w-full"
                                 />
                             </div>
 
@@ -146,7 +172,7 @@ export default function Configuration({ account }) {
                             </button>
                         </form>
                     </div>
-
+                    {/* Seccion de logo*/}
                     <div className="bg-white p-8 rounded-[30px] shadow-sm border border-gray-100 col-span-1 lg:col-span-2">
                         <div className="flex items-center gap-3 mb-6">
                             <Smartphone className="text-blue-500" size={24} />
@@ -157,12 +183,26 @@ export default function Configuration({ account }) {
                             {/* Logo de la App */}
                             <div className="p-4 bg-blue-50/50 rounded-2xl border-2 border-dashed border-blue-200">
                                 <label className="block text-xs font-black uppercase text-blue-400 mb-3 flex items-center gap-2">
-                                    Logo de la Aplicación
+                                    Logo de la Aplicación Actual
                                 </label>
+
+                                {/* --- PREVISUALIZACIÓN DEL LOGO ACTUAL --- */}
+                                {account?.logo_path ? (
+                                    <div className="mb-4 flex justify-center bg-white p-2 rounded-xl border border-blue-100">
+                                        <img 
+                                            src={account.logo_path} 
+                                            alt="Logo Actual" 
+                                            className="max-h-20 object-contain"
+                                        />
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-blue-400 italic mb-4 text-center">No hay un logo configurado</p>
+                                )}
+
                                 <input 
                                     type="file"
                                     onChange={e => setData('logo_image', e.target.files[0])}
-                                    className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-600"
+                                    className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-600 w-full"
                                 />
                             </div>
 
@@ -175,13 +215,15 @@ export default function Configuration({ account }) {
                                     placeholder="Ej: 59170000000"
                                     className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
+                                {errors.whatsapp_number && <span className="text-red-500 text-xs">{errors.whatsapp_number}</span>}
                             </div>
                         </div>
+
                         <div className="mt-8 flex justify-end">
                             <button 
                                 onClick={submitIdentity}
                                 disabled={processing}
-                                className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                                className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
                             >
                                 {processing ? 'Guardando...' : 'Actualizar Identidad'}
                             </button>

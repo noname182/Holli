@@ -11,10 +11,12 @@ class CustomOrderController extends Controller
 {
     public function store(Request $request)
     {
+        \Log::info('Datos recibidos:', $request->all());
         // 1. Validación (Mantenemos tus reglas de MariaDB)
         $request->validate([
             'tutor_name' => 'required|string|max:255',
             'whatsapp_number' => 'required|string|max:20',
+            'email' => 'nullable|email|max:255',
             'pet_name' => 'required|string|max:255',
             'pet_age' => 'required|string|max:50',
             'pet_weight' => 'required|string|max:100',
@@ -23,9 +25,10 @@ class CustomOrderController extends Controller
             'monthly_quantity' => 'required|string|max:100',
             'diet_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240', 
         ]);
-
         $data = $request->all();
-
+        unset($data['status']);
+        $data['status_id'] = 1;
+        
         // 2. PROCESO CLOUDINARY (Basado en tu ProductController)
         if ($request->hasFile('diet_file')) {
             try {

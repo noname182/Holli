@@ -124,4 +124,16 @@ class OrderController extends Controller
         // Importante: 'back()' refresca los datos en la vista de React automáticamente
         return back()->with('success', 'Estado de la orden actualizado.');
     }
+
+    public function destroy(Order $order)
+    {
+        try {
+            $order->items()->delete(); 
+            $order->delete();
+
+            return back()->with('message', 'Pedido eliminado correctamente.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'No se pudo eliminar el pedido.');
+        }
+    }
 }

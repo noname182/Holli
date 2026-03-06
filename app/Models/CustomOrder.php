@@ -21,6 +21,7 @@ class CustomOrder extends Model
     protected $fillable = [
         'tutor_name',
         'whatsapp_number',
+        'email',
         'pet_name',
         'pet_age',
         'pet_weight',
@@ -52,7 +53,7 @@ class CustomOrder extends Model
      * Opcional: Definir valores por defecto para nuevos registros.
      */
     protected $attributes = [
-        'status' => 'pendiente',
+        'status_id' => 1, // 1 es el ID para "Pendiente" en tu tabla
     ];
 
     public function status()

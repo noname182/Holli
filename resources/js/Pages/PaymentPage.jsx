@@ -17,7 +17,13 @@ export default function PaymentPage({ cuenta }) {
         direccion: '',
         referencia: ''
     });
-
+    const isStep1Valid = () => {
+        return (
+            form.nombre?.trim().length > 2 &&
+            form.celular?.trim().length >= 8 &&
+            form.direccion?.trim().length > 5
+        );
+    };
     // Cálculo dinámico para evitar el error de "0 BOB"
     const totalReal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0).toFixed(2);
 
@@ -40,11 +46,7 @@ export default function PaymentPage({ cuenta }) {
             price: item.price,
             subtotal: (item.price * item.quantity).toFixed(2)
         }));
-        console.log("IDs de variantes:", cartMapeado.map(i => i.variant_id));
-        console.log("SKUs:", cartMapeado.map(i => i.sku));
-        console.log("Cantidades:", cartMapeado.map(i => i.quantity)); // era quantitu
-        console.log("Precios:", cartMapeado.map(i => i.price));
-        console.log("Subtotales:", cartMapeado.map(i => i.subtotal));
+        
 
         router.post(route('orders.store'), {
             order_id: orderId,
@@ -57,12 +59,10 @@ export default function PaymentPage({ cuenta }) {
             cart: cartMapeado 
         }, {
             onSuccess: (page) => {
-                // 💡 En JS no usamos ': any'. Accedemos directamente a props.
                 const idRecibido = page.props.flash?.order_id;
 
                 if (idRecibido) {
-                    console.log("📥 ID recibido del servidor:", idRecibido);
-                    setOrderId(idRecibido); // 👈 Vital para que el próximo envío use este ID
+                    setOrderId(idRecibido);
                 }
                 setStep(2);
             },
@@ -79,7 +79,7 @@ export default function PaymentPage({ cuenta }) {
         const adminNumber = cuenta?.whatsapp_number || "59174618956"; 
         
         const detalleProductos = cart.map(item => 
-            `- ${item.quantity}x ${item.name} [SKU: ${item.sku || 'N/A'}]`
+            `- ${item.quantity}x ${item.name}`
         ).join('\n');
 
         const mensaje = encodeURIComponent(
@@ -117,44 +117,104 @@ export default function PaymentPage({ cuenta }) {
                         
                         {/* --- VISTA PASO 1: FORMULARIO --- */}
                         {step === 1 && (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
                                 <div className="space-y-4">
-                                    <div className="relative">
-                                        <User className="absolute left-4 top-4 text-gray-400" size={20} />
-                                        <input 
-                                            name="nombre" 
-                                            placeholder="Nombre Completo" 
-                                            className="w-full pl-12 p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
-                                            onChange={handleChange} 
-                                            value={form.nombre} />
-                                    </div>
-                                    <input 
-                                        name="email" 
-                                        type="email"
-                                        placeholder="Correo Electrónico (Para tu recibo)" 
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
-                                        onChange={handleChange} 
-                                        value={form.email} 
-                                    />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <input 
-                                            name="celular" 
-                                            placeholder="WhatsApp" 
-                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
-                                            onChange={handleChange} 
-                                            value={form.celular} 
-                                        />
-                                        <div className="bg-[#EBF1D5] p-4 rounded-2xl font-black text-center text-[#006400]">
-                                            {totalReal} BOB
+                                    
+                                    {/* Nombre Completo */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Nombre Completo</label>
+                                        <div className="relative">
+                                            <User className="absolute left-4 top-4 text-gray-400" size={20} />
+                                            <input 
+                                                name="nombre" 
+                                                placeholder="Ej: Juan Pérez Ramirez" 
+                                                className="w-full pl-12 p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
+                                                onChange={handleChange} 
+                                                value={form.nombre} 
+                                            />
                                         </div>
                                     </div>
-                                    <input name="direccion" placeholder="Dirección Exacta" className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" onChange={handleChange} value={form.direccion} />
-                                    <input name="referencia" placeholder="Referencia (Color de casa, etc.)" className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" onChange={handleChange} value={form.referencia} />
+
+                                    {/* Email - OPCIONAL */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-2">
+                                            Correo Electrónico (opcional)
+                                        </label>
+                                        <input 
+                                            name="email" 
+                                            type="email"
+                                            placeholder="ejemplo@correo.com" 
+                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
+                                            onChange={handleChange} 
+                                            value={form.email} 
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* WhatsApp */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-700 ml-2">WhatsApp (min. 8 numeros)</label>
+                                            <input 
+                                                name="celular" 
+                                                placeholder="77000000" 
+                                                className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
+                                                onChange={handleChange} 
+                                                value={form.celular} 
+                                            />
+                                        </div>
+
+                                        {/* Total Visual */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Total a Pagar</label>
+                                            <div className="bg-[#EBF1D5] p-4 rounded-2xl font-black text-center text-[#006400] h-[56px] flex items-center justify-center">
+                                                {totalReal} BOB
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Dirección */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Dirección Exacta</label>
+                                        <input 
+                                            name="direccion" 
+                                            placeholder="Ej: Av. Principal #123, Condominio X" 
+                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
+                                            onChange={handleChange} 
+                                            value={form.direccion} 
+                                        />
+                                    </div>
+
+                                    {/* Referencia */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Referencia de ubicación</label>
+                                        <input 
+                                            name="referencia" 
+                                            placeholder="Ej: Portón negro, frente al parque, etc" 
+                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#008542] outline-none" 
+                                            onChange={handleChange} 
+                                            value={form.referencia} 
+                                        />
+                                    </div>
                                 </div>
                                 
-                                <button onClick={goToPayment} className="w-full bg-[#008542] text-white py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#006400] transition-all">
-                                    Siguiente <ChevronRight size={20} />
-                                </button>
+                                {/* Botón y Aviso */}
+                                <div className="space-y-4 pt-2">
+                                    <button 
+                                        onClick={goToPayment} 
+                                        disabled={!isStep1Valid()}
+                                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg ${
+                                            isStep1Valid() 
+                                            ? 'bg-[#008542] text-white hover:bg-[#006400] active:scale-95' 
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+                                        }`}
+                                    >
+                                        Siguiente <ChevronRight size={20} />
+                                    </button>
+                                    <p className="text-[11px] text-gray-400 mt-4 text-center italic">
+                                        * Llena los campos para continuar con tu pedido de Holli.
+                                    </p>
+                                    
+                                </div>
                             </div>
                         )}
 
@@ -166,10 +226,10 @@ export default function PaymentPage({ cuenta }) {
                                 </button>
 
                                 <div className="flex gap-4">
-                                    <button onClick={() => setMethod('qr')} className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${method === 'qr' ? 'border-[#008542] bg-green-50' : 'border-gray-100 text-gray-400'}`}>
+                                    <button onClick={() => setMethod('qr')} className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${method === 'qr' ? 'border-[#008542] bg-green-50' : 'border-gray-100 text-gray-700'}`}>
                                         <QrCode size={24} /> <span className="text-[10px] font-bold uppercase">QR Directo</span>
                                     </button>
-                                    <button onClick={() => setMethod('transfer')} className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${method === 'transfer' ? 'border-[#008542] bg-green-50' : 'border-gray-100 text-gray-400'}`}>
+                                    <button onClick={() => setMethod('transfer')} className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${method === 'transfer' ? 'border-[#008542] bg-green-50' : 'border-gray-100 text-gray-700'}`}>
                                         <CreditCard size={24} /> <span className="text-[10px] font-bold uppercase">Transferencia</span>
                                     </button>
                                 </div>
@@ -181,7 +241,7 @@ export default function PaymentPage({ cuenta }) {
                                                 <p className="text-[11px] text-gray-500 font-bold uppercase">Toca el QR para ampliar</p>
                                                 <img src={cuenta.qr_image_path} onClick={() => setIsZoomed(true)} className="mx-auto max-w-[150px] rounded-lg shadow-xl cursor-zoom-in active:scale-95 transition-transform" />
                                             </div>
-                                        ) : <p className="text-gray-400 italic">QR no disponible</p>
+                                        ) : <p className="text-gray-700 italic">QR no disponible</p>
                                     ) : (
                                         <div className="text-left w-full space-y-2">
                                             <p className="text-[10px] font-black text-[#008542] uppercase tracking-widest">Datos de cuenta:</p>

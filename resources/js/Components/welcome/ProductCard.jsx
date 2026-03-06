@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProductCard({ variant }) {
     const [isVisiting, setIsVisiting] = useState(false);
-
+    const stockActual = variant.stock || 0; 
+    const esBajoStock = stockActual > 0 && stockActual <= 5;
     const handleSeeDetail = () => {
         if (isVisiting) return; // Doble protección
         
@@ -69,7 +70,17 @@ export default function ProductCard({ variant }) {
                             {variant.price.toFixed(2)} BOB
                         </span>
                     </div>
-
+                    {stockActual > 0 ? (
+                        <span className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${
+                            esBajoStock ? 'text-amber-500' : 'text-gray-400'
+                        }`}>
+                            {esBajoStock ? 'ÚLTIMAS ' : ''}{stockActual} bolsas disponibles
+                        </span>
+                    ) : (
+                        <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-red-500">
+                            Sin stock disponible
+                        </span>
+                    )}
                     <div className="mt-auto space-y-2">
                         <button 
                             onClick={handleSeeDetail}
@@ -85,11 +96,15 @@ export default function ProductCard({ variant }) {
                         </button>
 
                         <button 
-                            onClick={() => setIsModalOpen(true)}
-                            disabled={isVisiting} // Bloqueado si ya se está navegando
-                            className="w-full bg-[#008542] hover:bg-[#006d35] text-white text-[10px] py-2 rounded-lg font-bold uppercase transition-colors disabled:opacity-50"
+                            onClick={() => stockActual > 0 && setIsModalOpen(true)} // Solo abre si hay stock
+                            disabled={isVisiting || stockActual <= 0} // Deshabilitado si está cargando O si stock es 0
+                            className={`w-full text-[10px] py-2 rounded-lg font-bold uppercase transition-all ${
+                                stockActual > 0 
+                                    ? 'bg-[#008542] hover:bg-[#006d35] text-white' 
+                                    : 'bg-gray-300 text-gray-700 cursor-not-allowed opacity-70' // Estilo para agotado
+                            }`}
                         >
-                            Agregar
+                            {stockActual > 0 ? 'Agregar' : 'Agotado'}
                         </button>
                     </div>
                 </div>
@@ -99,7 +114,6 @@ export default function ProductCard({ variant }) {
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        {/* Overlay: Fondo oscuro desenfocado */}
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
