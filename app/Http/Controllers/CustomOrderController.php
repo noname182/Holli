@@ -7,12 +7,13 @@ use Illuminate\Http\Request;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Log; 
+use Illuminate\Support\Facades\Storage;
 class CustomOrderController extends Controller
 {
     public function store(Request $request)
     {
         \Log::info('Datos recibidos:', $request->all());
-        // 1. Validación (Mantenemos tus reglas de MariaDB)
+
         $request->validate([
             'tutor_name' => 'required|string|max:255',
             'whatsapp_number' => 'required|string|max:20',
@@ -25,40 +26,47 @@ class CustomOrderController extends Controller
             'monthly_quantity' => 'required|string|max:100',
             'diet_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240', 
         ]);
+
         $data = $request->all();
         unset($data['status']);
         $data['status_id'] = 1;
-        
-        // 2. PROCESO CLOUDINARY (Basado en tu ProductController)
-        if ($request->hasFile('diet_file')) {
-            try {
-                // Usamos uploadApi() tal como lo haces en tus productos
-                $result = cloudinary()->uploadApi()->upload(
-                    $request->file('diet_file')->getRealPath(), 
-                    [
-                        'folder' => 'natural_holli/diets',
-                        'resource_type' => 'auto' // Crucial para aceptar PDF e imágenes
-                    ]
-                );
 
-                // Verificamos el resultado y asignamos la URL segura
-                if (isset($result['secure_url'])) {
-                    $data['diet_file_url'] = $result['secure_url'];
+        if ($request->hasFile('diet_file')) {
+            $file = $request->file('diet_file');
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            try {
+                if ($extension === 'pdf') {
+                    // --- OPCIÓN A: PDF (Almacenamiento Local) ---
+                    // Se guarda en storage/app/public/diets y se accede vía /storage/diets/
+                    $path = $file->store('diets', 'public');
+                    $data['diet_file_url'] = asset('storage/' . $path);
+                    \Log::info('PDF guardado localmente en: ' . $data['diet_file_url']);
+                } else {
+                    // --- OPCIÓN B: IMÁGENES (Cloudinary) ---
+                    $result = cloudinary()->uploadApi()->upload(
+                        $file->getRealPath(), 
+                        [
+                            'folder' => 'natural_holli/diets',
+                            'resource_type' => 'image'
+                        ]
+                    );
+
+                    if (isset($result['secure_url'])) {
+                        $data['diet_file_url'] = $result['secure_url'];
+                        \Log::info('Imagen guardada en Cloudinary: ' . $data['diet_file_url']);
+                    }
                 }
             } catch (\Exception $e) {
-                // Logueamos el error para depuración
-                \Log::error('Error Cloudinary Dieta Personalizada: ' . $e->getMessage());
+                \Log::error('Error al procesar archivo de dieta: ' . $e->getMessage());
             }
         }
 
-        
-        // 3. Crear el registro en MariaDB
-        // Tu modelo CustomOrder ya tiene los $casts para health_conditions y restrictions
         CustomOrder::create($data);
 
-        // 4. Retornar éxito para activar el Paso 5 en React
         return Redirect::back()->with('success', '¡Pedido Holli recibido!');
     }
+
     public function updateStatus(Request $request, CustomOrder $customOrder)
     {
         Log::info('Iniciando actualización de estado personalizado', [
@@ -82,17 +90,36 @@ class CustomOrderController extends Controller
     public function destroy(CustomOrder $customOrder)
     {   
         try {
-            // 1. Opcional: Si quieres borrar el archivo de Cloudinary antes de eliminar el registro
             if ($customOrder->diet_file_url) {
-                // Extraemos el public_id de la URL para borrarlo en la nube
-                $publicId = "natural_holli/diets/" . basename($customOrder->diet_file_url, "." . pathinfo($customOrder->diet_file_url, PATHINFO_EXTENSION));
-                Cloudinary::destroy($publicId);
+                $url = $customOrder->diet_file_url;
+
+                // 1. Identificamos si el archivo es local (PDF) o de Cloudinary (Imagen)
+                if (str_contains($url, '/storage/diets/')) {
+                    // --- LÓGICA LOCAL (PDF) ---
+                    // Extraemos el nombre del archivo de la URL (ej: diets/archivo.pdf)
+                    $filePath = 'diets/' . basename($url);
+                    
+                    // Verificamos si existe en el disco público y lo eliminamos
+                    if (Storage::disk('public')->exists($filePath)) {
+                        Storage::disk('public')->delete($filePath);
+                        \Log::info('Archivo PDF eliminado del servidor local: ' . $filePath);
+                    }
+                } else {
+                    // --- LÓGICA CLOUDINARY (IMÁGENES) ---
+                    // Extraemos el publicId para la API de Cloudinary
+                    $publicId = "natural_holli/diets/" . pathinfo($url, PATHINFO_FILENAME);
+                    
+                    cloudinary()->uploadApi()->destroy($publicId, [
+                        'resource_type' => 'image' 
+                    ]);
+                    \Log::info('Imagen eliminada de Cloudinary: ' . $publicId);
+                }
             }
 
-            // 2. Eliminamos de MariaDB
+            // 2. Eliminamos el registro de MariaDB
             $customOrder->delete();
 
-            return redirect()->back()->with('success', 'Pedido personalizado eliminado correctamente.');
+            return redirect()->back()->with('success', 'Pedido y archivos eliminados correctamente.');
         } catch (\Exception $e) {
             \Log::error('Error al eliminar pedido personalizado: ' . $e->getMessage());
             return redirect()->back()->with('error', 'No se pudo eliminar el registro.');

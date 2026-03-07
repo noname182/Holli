@@ -15,6 +15,10 @@ export default function Personalized() {
         whatsapp_number: '',
         email: '',
         pet_name: '',
+        pet_age_value: '',
+        pet_age_unit: 'años',
+        pet_weight_value: '',
+        pet_weight_unit: 'kg',
         pet_age: '',
         pet_weight: '',
         pet_size: '',
@@ -34,10 +38,12 @@ export default function Personalized() {
 
     const submit = (e) => {
         e.preventDefault();
-        
-        // El MainLayout activará el bloqueo de mouse automáticamente al iniciar 'post'
+
+        data.pet_age = `${data.pet_age_value} ${data.pet_age_unit}`;
+        data.pet_weight = `${data.pet_weight_value} ${data.pet_weight_unit}`;
+
         post(route('custom-orders.store'), {
-            forceFormData: true, // Importante para el archivo del Paso 3
+            forceFormData: true,
             onSuccess: () => {
                 setStep(5);
             },

@@ -48,9 +48,7 @@ export default function Step2HealthConditions({ data, setData, nextStep, prevSte
             </div>
 
             <div className="flex gap-4">
-                <button type="button" onClick={prevStep} className="w-1/3 border-2 border-gray-100 py-4 rounded-2xl font-bold text-gray-400 hover:bg-gray-50 transition-all">
-                    Atrás
-                </button>
+                <button type="button" onClick={prevStep} className="w-1/3 border-2 border-gray-400 py-4 rounded-2xl font-bold text-gray-700 hover:bg-gray-200 transition-all">Atrás</button>
                 <button type="button" onClick={nextStep} className="w-2/3 bg-[#008542] text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-[#006d35] transition-all">
                     Continuar
                 </button>

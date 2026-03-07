@@ -63,13 +63,13 @@ export default function AdminDashboard({ categories = [] }) {
           className="text-center mb-16"
         >
           <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-gray-900 tracking-tight">
-            Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400">Admin</span> ⚡
+            Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400">Admin</span>
           </h1>
           <p className="mt-4 text-gray-500 text-lg md:text-xl font-medium">Gestiona tu plataforma desde un solo lugar.</p>
         </motion.div>
 
         {/* Grid de 4 Cuadrados */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
           {menuItems.map((item, index) => (
             <motion.div
               key={item.label}

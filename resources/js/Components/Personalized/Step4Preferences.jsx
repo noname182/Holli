@@ -67,7 +67,7 @@ export default function Step4Preferences({ data, setData, prevStep, processing }
             </div>
 
             <div className="flex gap-4 pt-4">
-                <button type="button" onClick={prevStep} className="w-1/3 border-2 border-gray-100 py-4 rounded-2xl font-bold text-gray-400">Atrás</button>
+                <button type="button" onClick={prevStep} className="w-1/3 border-2 border-gray-400 py-4 rounded-2xl font-bold text-gray-700 hover:bg-gray-200 transition-all">Atrás</button>
                 <button type="submit" disabled={processing || !data.monthly_quantity}
                     className={`w-2/3 py-4 rounded-2xl font-bold shadow-lg transition-all ${
                         data.monthly_quantity ? 'bg-[#008542] text-white hover:bg-[#006d35]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'

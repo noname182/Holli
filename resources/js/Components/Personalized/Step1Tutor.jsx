@@ -4,13 +4,17 @@ import { Dog } from 'lucide-react';
 export default function Step1BasicInfo({ data, setData, nextStep, errors }) {
     
     const isStep1Valid = () => {
+        const isEmailValid = !data.email || (data.email.trim() !== '' && data.email.includes('@'));
         return (
             data.tutor_name?.trim().length > 2 &&
             data.whatsapp_number?.trim().length >= 8 &&
             data.pet_name?.trim() !== '' &&
-            data.pet_age?.trim() !== '' &&
-            data.pet_weight !== '' &&
-            data.pet_size !== '' 
+            data.pet_age_value !== '' && 
+            data.pet_age_value > 0 &&
+            data.pet_weight_value !== '' && 
+            data.pet_weight_value > 0 &&
+            data.pet_size !== '' &&
+            isEmailValid
         );
     };
 
@@ -21,7 +25,7 @@ export default function Step1BasicInfo({ data, setData, nextStep, errors }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 {/* --- SECCIÓN TUTOR --- */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Nombre del Tutor</label>
+                    <label className="text-[14px] font-black uppercase text-gray-700 ml-2">Nombre del Tutor</label>
                     <input type="text" placeholder="Ej: Juan Pérez Ramirez" 
                         className="w-full rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                         onChange={e => setData('tutor_name', e.target.value)} value={data.tutor_name} />
@@ -29,7 +33,7 @@ export default function Step1BasicInfo({ data, setData, nextStep, errors }) {
                 </div>
                     
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Número de WhatsApp (min 8 numeros)</label>
+                    <label className="text-[14px] font-black uppercase text-gray-700 ml-2">Número de WhatsApp (min 8 numeros)</label>
                     <input type="text" placeholder="Ej: 77000000"  
                         className="w-full rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                         onChange={e => setData('whatsapp_number', e.target.value)} value={data.whatsapp_number} />
@@ -37,7 +41,7 @@ export default function Step1BasicInfo({ data, setData, nextStep, errors }) {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Correo Electrónico (opcional)</label>
+                    <label className="text-[14px] font-black uppercase text-gray-700 ml-2">Correo Electrónico (opcional)</label>
                     <input type="email" placeholder="ejemplo@correo.com" 
                         className="w-full rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                         onChange={e => setData('email', e.target.value)} value={data.email} />
@@ -46,30 +50,79 @@ export default function Step1BasicInfo({ data, setData, nextStep, errors }) {
 
                 {/* --- SECCIÓN MASCOTA --- */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Nombre de la Mascota</label>
+                    <label className="text-[14px] font-black uppercase text-gray-700 ml-2">Nombre de la Mascota</label>
                     <input type="text" placeholder="Ej: Bobby" 
                         className="w-full rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
                         onChange={e => setData('pet_name', e.target.value)} value={data.pet_name} />
                 </div>
                 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Edad de la Mascota</label>
-                    <input type="text" placeholder="Ej: 3 años y 2 meses" 
-                        className="w-full rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
-                        onChange={e => setData('pet_age', e.target.value)} value={data.pet_age} />
+                    <label className="text-[14px] font-black uppercase text-gray-700 ml-2">
+                        Edad de la Mascota
+                    </label>
+                    
+                    <div className="flex gap-2">
+                        {/* Input Numérico */}
+                        <input 
+                            type="number" 
+                            min="1"
+                            placeholder="Ej: 3" 
+                            className="w-1/3 rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all font-bold"
+                            onChange={e => setData('pet_age_value', e.target.value)} 
+                            value={data.pet_age_value || ''} 
+                        />
+                        
+                        {/* ComboBox de Unidad */}
+                        <select 
+                            className="flex-1 rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all uppercase font-black text-xs tracking-widest cursor-pointer"
+                            onChange={e => setData('pet_age_unit', e.target.value)}
+                            value={data.pet_age_unit || 'años'}
+                        >
+                            <option value="años">Año(s)</option>
+                            <option value="meses">Mes(es)</option>
+                        </select>
+                    </div>
+                    
+                    {/* Error de validación (si existiera) */}
+                    {errors.pet_age && <p className="text-red-500 text-xs ml-2">{errors.pet_age}</p>}
                 </div>
                     
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Peso Actual</label>
-                    <input type="text" placeholder="Ej: 12.5 kg" 
-                        className="w-full rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all" 
-                        onChange={e => setData('pet_weight', e.target.value)} value={data.pet_weight} />
+                    <label className="text-[14px] font-black uppercase text-gray-700 ml-2">
+                        Peso Actual de la Mascota
+                    </label>
+                    
+                    <div className="flex gap-2">
+                        {/* Input para el Peso (Permite decimales como 12.5) */}
+                        <input 
+                            type="number" 
+                            step="0.1" // Permite incrementos decimales
+                            min="0.1"
+                            placeholder="Ej: 12.5" 
+                            className="w-1/2 rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all font-bold"
+                            onChange={e => setData('pet_weight_value', e.target.value)} 
+                            value={data.pet_weight_value || ''} 
+                        />
+                        
+                        {/* ComboBox de Unidad de Peso */}
+                        <select 
+                            className="flex-1 rounded-xl border-gray-100 bg-gray-100 focus:ring-[#008542] p-4 transition-all uppercase font-black text-xs tracking-widest cursor-pointer"
+                            onChange={e => setData('pet_weight_unit', e.target.value)}
+                            value={data.pet_weight_unit || 'kg'}
+                        >
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="g">Gramos (g)</option>
+                        </select>
+                    </div>
+                    
+                    {/* Error de validación de Laravel */}
+                    {errors.pet_weight && <p className="text-red-500 text-xs ml-2">{errors.pet_weight}</p>}
                 </div>
             </div>
 
             {/* --- COMPORTAMIENTO --- */}
-            <div className="space-y-2 text-left">
-                <label className="text-sm font-bold text-gray-700 ml-1">Comportamiento y actividad habitual (opcional)</label>
+            <div className="space-y-2 text-left"> 
+                <label className="text-[14px] font-bold text-gray-700 ml-1">COMPORTAMIENTO Y ACTIVIDAD HABITUAL (OPCIONAL)</label>
                 <textarea 
                     placeholder="Cuéntanos cómo es su día a día (ej: paseos diarios, nivel de energía, duerme mucho, etc)"
                     className="w-full rounded-2xl border-gray-100 bg-gray-100 focus:ring-[#008542] h-32 p-4"
