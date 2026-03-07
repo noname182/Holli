@@ -30,7 +30,16 @@ export default function OrderDetailModal({ order, type, close }) {
                                     📞 {order.whatsapp_number || order.customer_phone}
                                 </p>
                                 <p className="flex items-center gap-2 italic">
-                                    📧 {order.customer_email || 'Sin correo registrado'}
+                                    <span>📧</span>
+                                    {order.customer_email || order.email ? (
+                                        <span className="text-gray-200">
+                                            {order.customer_email || order.email}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs opacity-60">
+                                            Sin correo registrado
+                                        </span>
+                                    )}
                                 </p>
                             </div>
                         </div>

@@ -114,8 +114,9 @@ Route::prefix('admin')->group(function () {
         Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('admin.orders.update');
         
         // Eliminar orden
-        Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('admin.orders.destroy');
-
+        Route::delete('admin/orders/{order}', [OrderController::class, 'destroy'])->name('admin.orders.destroy');
+        // Eliminar una orden personalizada
+        Route::delete('/custom-orders/{customOrder}', [CustomOrderController::class, 'destroy'])->name('admin.orders.destroyCustom');
         //para ver y editar los pedidos personalizados
         Route::patch('/custom-orders/{customOrder}', [CustomOrderController::class, 'updateStatus'])->name('admin.orders.updateCustomStatus');
         

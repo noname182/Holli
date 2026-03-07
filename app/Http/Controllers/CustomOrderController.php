@@ -78,4 +78,24 @@ class CustomOrderController extends Controller
 
         return redirect()->back();// Esto refresca los datos en React automáticamente
     }
+
+    public function destroy(CustomOrder $customOrder)
+    {   
+        try {
+            // 1. Opcional: Si quieres borrar el archivo de Cloudinary antes de eliminar el registro
+            if ($customOrder->diet_file_url) {
+                // Extraemos el public_id de la URL para borrarlo en la nube
+                $publicId = "natural_holli/diets/" . basename($customOrder->diet_file_url, "." . pathinfo($customOrder->diet_file_url, PATHINFO_EXTENSION));
+                Cloudinary::destroy($publicId);
+            }
+
+            // 2. Eliminamos de MariaDB
+            $customOrder->delete();
+
+            return redirect()->back()->with('success', 'Pedido personalizado eliminado correctamente.');
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar pedido personalizado: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'No se pudo eliminar el registro.');
+        }
+    }
 }

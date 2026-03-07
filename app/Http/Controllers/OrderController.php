@@ -111,29 +111,67 @@ class OrderController extends Controller
     /**
      * Actualizar estado (Cambio rápido desde la tabla)
      */
+    
     public function update(Request $request, Order $order)
     {
         $request->validate([
-            'status_id' => 'required|exists:order_status,id', // Validamos contra tu tabla singular
+            'status_id' => 'required|integer|exists:order_status,id',
         ]);
 
-        $order->update([
-            'status_id' => $request->status_id
-        ]);
+        $oldStatus = (int)$order->status_id;
+        $newStatus = (int)$request->status_id;
 
-        // Importante: 'back()' refresca los datos en la vista de React automáticamente
-        return back()->with('success', 'Estado de la orden actualizado.');
+        // Solo ejecutamos lógica de stock si el estado realmente cambió
+        if ($oldStatus !== $newStatus) {
+            try {
+                DB::transaction(function () use ($order, $oldStatus, $newStatus) {
+                    
+                    // CASO A: De "Cualquiera" a "Pagado" (ID 2) -> RESTAR STOCK
+                    if ($newStatus === 2) {
+                        foreach ($order->items as $item) {
+                            $variant = $item->variant; // Asumiendo relación 'variant' en OrderItem
+                            if ($variant) {
+                                $variant->decrement('stock', $item->quantity);
+                            }
+                        }
+                    }
+
+                    // CASO B: De "Pagado" (ID 2) a "Cualquiera" (ej. Pendiente) -> SUMAR STOCK (Devolución)
+                    if ($oldStatus === 2 && $newStatus !== 2) {
+                        foreach ($order->items as $item) {
+                            $variant = $item->variant;
+                            if ($variant) {
+                                $variant->increment('stock', $item->quantity);
+                            }
+                        }
+                    }
+
+                    // Finalmente actualizamos el estado del pedido
+                    $order->update(['status_id' => $newStatus]);
+                });
+
+                return back()->with('success', 'Estado y stock actualizados.');
+
+            } catch (\Exception $e) {
+                \Log::error("Error de stock: " . $e->getMessage());
+                return back()->with('error', 'No se pudo actualizar el stock: ' . $e->getMessage());
+            }
+        }
+
+        return back();
     }
-
     public function destroy(Order $order)
     {
         try {
             $order->items()->delete(); 
+
+            // 2. Ahora eliminamos la orden principal
             $order->delete();
 
-            return back()->with('message', 'Pedido eliminado correctamente.');
+            return back()->with('success', 'Compra eliminada correctamente.');
         } catch (\Exception $e) {
-            return back()->with('error', 'No se pudo eliminar el pedido.');
+            \Log::error("Error al eliminar pedido: " . $e->getMessage());
+            return back()->with('error', 'No se pudo eliminar el pedido porque tiene datos vinculados.');
         }
     }
 }

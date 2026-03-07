@@ -31,7 +31,6 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        \Log::info("TEST: El log ya funciona y los IDs son: ", $request->all());
         $search = $request->query('search', '');
         $perPage = 30;
 
