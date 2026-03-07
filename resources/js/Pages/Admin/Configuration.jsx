@@ -1,17 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AdminHeader from "@/Components/admin/AdminHeader.jsx";
 import { Head, useForm, Link } from '@inertiajs/react';
-import { Save, Lock, Landmark, QrCode , Smartphone, ArrowLeft} from 'lucide-react';
+import { 
+    Save, Lock, Landmark, QrCode, Smartphone, 
+    ArrowLeft, User, Settings, Palette, ShieldCheck 
+} from 'lucide-react';
 
-export default function Configuration({ account }) {
+export default function Configuration({ account, auth }) {
+    // Estado para controlar qué sección está activa
+    const [activeTab, setActiveTab] = useState('banco');
+
+    // --- FORMULARIOS (Mismos que ya tienes) ---
     const { data, setData, post, processing, errors } = useForm({
         owner_name: account?.owner_name || '',
         bank_name: account?.bank_name || '',
-        account_number: account?.account_number || '',
         account_type: account?.account_type || '',
+        account_number: account?.account_number || '',
         qr_image: null,
         whatsapp_number: account?.whatsapp_number || '', 
         logo_image: null, 
+    });
+
+    const profileForm = useForm({
+        username: auth.user.username, 
+        email: auth.user.email,
     });
 
     const passwordForm = useForm({
@@ -20,214 +32,252 @@ export default function Configuration({ account }) {
         new_password_confirmation: '',
     });
 
-    const submitAccount = (e) => {
-        e.preventDefault();
-        post(route('admin.settings.update'), { forceFormData: true });
-    };
+    // --- FUNCIONES SUBMIT (Sin cambios) ---
+    const submitAccount = (e) => { e.preventDefault(); post(route('admin.settings.update'), { forceFormData: true }); };
+    const submitProfile = (e) => { e.preventDefault(); profileForm.put(route('profile.update')); };
+    const submitPassword = (e) => { e.preventDefault(); passwordForm.post(route('admin.password.update'), { onSuccess: () => passwordForm.reset() }); };
+    const submitIdentity = (e) => { e.preventDefault(); post(route('admin.settings.update'), { forceFormData: true }); };
 
-    const submitPassword = (e) => {
-        e.preventDefault();
-        passwordForm.post(route('admin.password.update'), {
-            onSuccess: () => passwordForm.reset(),
-        });
-    };
+    // Estilo para los botones de la barra lateral
+    const TabBtn = ({ id, label, icon: Icon }) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all ${
+                activeTab === id 
+                ? 'bg-[#008542] text-white shadow-lg shadow-green-100' 
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+            }`}
+        >
+            <Icon size={20} />
+            <span className="text-sm uppercase tracking-wider">{label}</span>
+        </button>
+    );
 
-    const submitIdentity = (e) => {
-        e.preventDefault();
-        // Usamos post para poder enviar el archivo del logo
-        post(route('admin.settings.update'), {
-            forceFormData: true,
-           
-        });
-    };
     return (
         <div className="min-h-screen bg-gray-50">
             <Head title="Configuraciones de Sistema" />
-            
-            {/* 1. El Header va arriba solo */}
             <AdminHeader />
 
-            {/* 2. El contenido va AFUERA del Header para que sea visible */}
             <main className="p-4 sm:p-8 max-w-7xl mx-auto">
-
-                <div className="mb-6">
-                    <Link 
-                        href="/admin/dashboard" 
-                        className="inline-flex items-center gap-2 text-gray-500 hover:text-black font-bold transition-colors group"
-                    >
-                        <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 group-hover:bg-gray-100 transition-all">
-                            <ArrowLeft size={20} />
-                        </div>
-                        <span className="text-sm uppercase tracking-widest">Volver al Panel</span>
-                    </Link>
+                {/* --- BOTÓN VOLVER --- */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+                    <div>
+                        <Link href="/admin/dashboard" className="flex items-center gap-2 text-gray-400 hover:text-black mb-2 transition-colors">
+                            <ArrowLeft size={16} /> <span className="text-xs font-black uppercase tracking-widest">Volver al Panel</span>
+                        </Link>
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tighter uppercase">Configuraciones</h1>
+                    </div>
                 </div>
 
-                <h1 className="text-3xl font-black text-gray-800 mb-8 uppercase tracking-tighter">
-                    Configuraciones Generales
-                </h1>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="flex flex-col lg:flex-row gap-8">
+                    {/* MENU LATERAL DE CONFIGURACIÓN */}
+                    <aside className="w-full lg:w-72 space-y-2">
+                        <TabBtn id="banco" label="Pagos y Banco" icon={Landmark} />
+                        <TabBtn id="perfil" label="Mi Perfil" icon={User} />
+                        <TabBtn id="identidad" label="Imagen Holli" icon={Palette} />
+                        <TabBtn id="seguridad" label="Seguridad" icon={ShieldCheck} />
+                    </aside>
                     
-                    {/* SECCIÓN PAGO (BNB) */}
-                    <div className="bg-white p-8 rounded-[30px] shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Landmark className="text-[#008542]" size={24} />
-                            <h2 className="text-xl font-bold text-gray-800">Datos Bancarios</h2>
-                        </div>
-
-                        <form onSubmit={submitAccount} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-black uppercase text-gray-400 mb-1">Titular de la Cuenta</label>
-                                <input 
-                                    value={data.owner_name}
-                                    onChange={e => setData('owner_name', e.target.value)}
-                                    className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#008542] outline-none"
-                                />
-                                {errors.owner_name && <span className="text-red-500 text-xs">{errors.owner_name}</span>}
+                    {/* CONTENIDO DE LA CONFIGURACIÓN */}
+                    <div className="flex-1">
+                        {/* SECCIÓN BANCO */}
+                        {activeTab === 'banco' && (
+                            <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-100 animate-in fade-in zoom-in duration-300">
+                                <h2 className="text-2xl font-black mb-8 flex items-center gap-3"><Landmark /> Datos Bancarios</h2>
+                                <form onSubmit={submitAccount} className="space-y-6">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-1">Titular de Cuenta</label>
+                                        <input value={data.owner_name} onChange={e => setData('owner_name', e.target.value)} className="w-full p-4 bg-gray-200 rounded-2xl border-none focus:ring-2 focus:ring-[#008542] font-bold" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-1">Banco del titular</label>
+                                        <input placeholder="Banco" value={data.bank_name} onChange={e => setData('bank_name', e.target.value)} className="w-full p-4 bg-gray-200 rounded-2xl border-none" />
+                                        <label className="text-[10px] font-black uppercase text-gray-700 ml-1">Numero de cuenta del banco</label>
+                                        <input placeholder="Nro de Cuenta" value={data.account_number} onChange={e => setData('account_number', e.target.value)} className="w-full p-4 bg-gray-200 rounded-2xl border-none" />
+                                    </div>
+                                    <div className="p-8 border-4 border-dashed border-gray-100 rounded-[35px] text-center">
+                                        {account?.qr_image_path && <img src={account.qr_image_path} className="max-h-48 mx-auto mb-6 rounded-3xl shadow-xl" />}
+                                        <input type="file" onChange={e => setData('qr_image', e.target.files[0])} className="text-xs text-gray-400 mx-auto" />
+                                    </div>
+                                    <button className="w-full bg-[#008542] text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-green-100">Guardar Información Bancaria</button>
+                                </form>
                             </div>
+                        )}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-black uppercase text-gray-400 mb-1">Banco</label>
-                                    <input 
-                                        value={data.bank_name}
-                                        onChange={e => setData('bank_name', e.target.value)}
-                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#008542] outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black uppercase text-gray-400 mb-1">Nro de Cuenta</label>
-                                    <input 
-                                        value={data.account_number}
-                                        onChange={e => setData('account_number', e.target.value)}
-                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#008542] outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                                <label className="block text-xs font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
-                                    <QrCode size={16} /> QR de Pago Actual
-                                </label>
+                        {/* SECCIÓN PERFIL */}
+                        {activeTab === 'perfil' && (
+                            <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-100 animate-in fade-in zoom-in duration-300">
+                                <h2 className="text-2xl font-black mb-8 flex items-center gap-3"><User /> Perfil de Administrador</h2>
                                 
-                                {account?.qr_image_path ? (
-                                    <div className="mb-4 flex justify-center">
-                                        <img 
-                                            src={account.qr_image_path} 
-                                            alt="QR Actual" 
-                                            className="max-h-48 rounded-lg shadow-md border border-gray-200"
+                                <form onSubmit={submitProfile} className="space-y-6">
+                                    {/* Grupo de Usuario */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                            Actualizar nombre del administrador
+                                        </label>
+                                        <input 
+                                            placeholder="Usuario" 
+                                            value={profileForm.data.username} 
+                                            onChange={e => profileForm.setData('username', e.target.value)} 
+                                            className="w-full p-4 bg-gray-100 rounded-2xl border-none font-bold focus:ring-2 focus:ring-blue-500 transition-all" 
+                                        />
+                                        {profileForm.errors.username && <p className="text-red-500 text-xs ml-1">{profileForm.errors.username}</p>}
+                                    </div>
+
+                                    {/* Grupo de Email */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                            Actualizar email
+                                        </label>
+                                        <input 
+                                            placeholder="Email" 
+                                            type="email" 
+                                            value={profileForm.data.email} 
+                                            onChange={e => profileForm.setData('email', e.target.value)} 
+                                            className="w-full p-4 bg-gray-100 rounded-2xl border-none font-bold focus:ring-2 focus:ring-blue-500 transition-all" 
+                                        />
+                                        {profileForm.errors.email && <p className="text-red-500 text-xs ml-1">{profileForm.errors.email}</p>}
+                                    </div>
+
+                                    <button className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+                                        Actualizar Correo y Usuario
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {/* SECCIÓN SEGURIDAD */}
+                        {activeTab === 'seguridad' && (
+                            <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-100 animate-in fade-in zoom-in duration-300">
+                                <div className="flex items-center gap-3 mb-8">
+                                    <Lock className="text-amber-500" size={24} />
+                                    <h2 className="text-2xl font-black text-gray-800">Seguridad</h2>
+                                </div>
+
+                                <form onSubmit={submitPassword} className="space-y-6">
+                                    {/* Grupo Contraseña Actual */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                            Contraseña Actual
+                                        </label>
+                                        <input 
+                                            type="password" 
+                                            placeholder="••••••••" 
+                                            value={passwordForm.data.current_password} 
+                                            onChange={e => passwordForm.setData('current_password', e.target.value)} 
+                                            className="w-full p-4 bg-gray-100 rounded-2xl border-none font-bold focus:ring-2 focus:ring-amber-500 transition-all" 
+                                        />
+                                        {passwordForm.errors.current_password && (
+                                            <p className="text-red-500 text-xs font-bold ml-1">{passwordForm.errors.current_password}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Grupo Nueva Contraseña */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                            Nueva Contraseña
+                                        </label>
+                                        <input 
+                                            type="password" 
+                                            placeholder="Mínimo 8 caracteres" 
+                                            value={passwordForm.data.new_password} 
+                                            onChange={e => passwordForm.setData('new_password', e.target.value)} 
+                                            className="w-full p-4 bg-gray-100 rounded-2xl border-none font-bold focus:ring-2 focus:ring-amber-500 transition-all" 
+                                        />
+                                        {passwordForm.errors.new_password && (
+                                            <p className="text-red-500 text-xs font-bold ml-1">{passwordForm.errors.new_password}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Grupo Confirmar Contraseña */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                            Confirmar Nueva Contraseña
+                                        </label>
+                                        <input 
+                                            type="password" 
+                                            placeholder="Repite la nueva contraseña" 
+                                            value={passwordForm.data.new_password_confirmation} 
+                                            onChange={e => passwordForm.setData('new_password_confirmation', e.target.value)} 
+                                            className="w-full p-4 bg-gray-100 rounded-2xl border-none font-bold focus:ring-2 focus:ring-amber-500 transition-all" 
                                         />
                                     </div>
-                                ) : (
-                                    <p className="text-xs text-gray-400 italic mb-4 text-center">No hay un QR configurado actualmente</p>
-                                )}
 
-                                <input 
-                                    type="file"
-                                    onChange={e => setData('qr_image', e.target.files[0])}
-                                    className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-[#008542] w-full"
-                                />
+                                    <button 
+                                        type="submit"
+                                        disabled={passwordForm.processing}
+                                        className="w-full bg-gray-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all disabled:opacity-50"
+                                    >
+                                        {passwordForm.processing ? 'Actualizando...' : 'Actualizar Contraseña'}
+                                    </button>
+                                </form>
                             </div>
+                        )}
 
-                            <button 
-                                disabled={processing}
-                                className="w-full bg-[#008542] text-white py-4 rounded-xl font-bold hover:bg-[#006d35] transition-all"
-                            >
-                                Guardar Cambios Bancarios
-                            </button>
-                        </form>
-                    </div>
+                        {/* SECCIÓN IDENTIDAD */}
+                        {activeTab === 'identidad' && (
+                            <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-100 animate-in fade-in zoom-in duration-300">
+                                <div className="flex items-center gap-3 mb-8">
+                                    <Smartphone className="text-purple-500" size={24} />
+                                    <h2 className="text-2xl font-black text-gray-800">Identidad Visual</h2>
+                                </div>
 
-                    {/* SECCIÓN SEGURIDAD */}
-                    <div className="bg-white p-8 rounded-[30px] shadow-sm border border-gray-100 h-fit">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Lock className="text-amber-500" size={24} />
-                            <h2 className="text-xl font-bold text-gray-800">Seguridad</h2>
-                        </div>
-
-                        <form onSubmit={submitPassword} className="space-y-4">
-                            <input 
-                                type="password"
-                                placeholder="Contraseña Actual"
-                                value={passwordForm.data.current_password} // Correcto
-                                onChange={e => passwordForm.setData('current_password', e.target.value)}
-                                className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
-                            />
-                            <input 
-                                type="password"
-                                placeholder="Nueva Contraseña"
-                                value={passwordForm.data.new_password} // 👈 Cambiado de current_password a new_password
-                                onChange={e => passwordForm.setData('new_password', e.target.value)}
-                                className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
-                            />
-                            <input 
-                                type="password"
-                                placeholder="Confirmar Nueva Contraseña"
-                                value={passwordForm.data.new_password_confirmation} // 👈 Agregado para validación
-                                onChange={e => passwordForm.setData('new_password_confirmation', e.target.value)}
-                                className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
-                            />
-                            <button className="w-full bg-gray-800 text-white py-4 rounded-xl font-bold hover:bg-black transition-all">
-                                Actualizar Contraseña
-                            </button>
-                        </form>
-                    </div>
-                    {/* Seccion de logo*/}
-                    <div className="bg-white p-8 rounded-[30px] shadow-sm border border-gray-100 col-span-1 lg:col-span-2">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Smartphone className="text-blue-500" size={24} />
-                            <h2 className="text-xl font-bold text-gray-800">Identidad y Contacto</h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Logo de la App */}
-                            <div className="p-4 bg-blue-50/50 rounded-2xl border-2 border-dashed border-blue-200">
-                                <label className="block text-xs font-black uppercase text-blue-400 mb-3 flex items-center gap-2">
-                                    Logo de la Aplicación Actual
-                                </label>
-
-                                {/* --- PREVISUALIZACIÓN DEL LOGO ACTUAL --- */}
-                                {account?.logo_path ? (
-                                    <div className="mb-4 flex justify-center bg-white p-2 rounded-xl border border-blue-100">
-                                        <img 
-                                            src={account.logo_path} 
-                                            alt="Logo Actual" 
-                                            className="max-h-20 object-contain"
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                                    {/* Grupo Logo */}
+                                    <div className="flex flex-col gap-3">
+                                        <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                            Logo de la Aplicación
+                                        </label>
+                                        <div className="p-6 border-2 border-dashed border-purple-100 rounded-[30px] bg-purple-50/30 flex flex-col items-center justify-center min-h-[180px]">
+                                            {account?.logo_path && (
+                                                <div className="mb-4 p-2 bg-white rounded-xl shadow-sm border border-purple-100">
+                                                    <img src={account.logo_path} className="max-h-16 object-contain" alt="Logo Actual" />
+                                                </div>
+                                            )}
+                                            <input 
+                                                type="file" 
+                                                onChange={e => setData('logo_image', e.target.files[0])} 
+                                                className="text-[10px] text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-100 file:text-purple-600 font-bold" 
+                                            />
+                                        </div>
                                     </div>
-                                ) : (
-                                    <p className="text-xs text-blue-400 italic mb-4 text-center">No hay un logo configurado</p>
-                                )}
 
-                                <input 
-                                    type="file"
-                                    onChange={e => setData('logo_image', e.target.files[0])}
-                                    className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-600 w-full"
-                                />
+                                    {/* Grupo WhatsApp con Instrucción Especial */}
+                                    <div className="flex flex-col gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
+                                                WhatsApp de Pedidos
+                                            </label>
+                                            <p className="text-[10px] font-bold text-purple-400 ml-1 uppercase italic leading-tight">
+                                                * Ingresa solo números, sin letras ni signos (ej: 59170000000)
+                                            </p>
+                                        </div>
+                                        
+                                        <input 
+                                            type="text"
+                                            placeholder="Ej: 59177000000" 
+                                            value={data.whatsapp_number} 
+                                            onChange={e => setData('whatsapp_number', e.target.value.replace(/\D/g, ''))} 
+                                            className="w-full p-4 bg-gray-100 rounded-2xl border-none font-bold focus:ring-2 focus:ring-purple-500 transition-all text-lg" 
+                                        />
+                                        
+                                        {errors.whatsapp_number && (
+                                            <p className="text-red-500 text-xs font-bold ml-2">{errors.whatsapp_number}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mt-10 flex justify-end">
+                                    <button 
+                                        onClick={submitIdentity} 
+                                        disabled={processing}
+                                        className="w-full lg:w-fit lg:px-12 bg-purple-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all disabled:opacity-50"
+                                    >
+                                        {processing ? 'Guardando...' : 'Actualizar Identidad'}
+                                    </button>
+                                </div>
                             </div>
-
-                            {/* WhatsApp de Pedidos */}
-                            <div>
-                                <label className="block text-xs font-black uppercase text-gray-400 mb-1">WhatsApp de Pedidos (Con código de país)</label>
-                                <input 
-                                    value={data.whatsapp_number}
-                                    onChange={e => setData('whatsapp_number', e.target.value)}
-                                    placeholder="Ej: 59170000000"
-                                    className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                                {errors.whatsapp_number && <span className="text-red-500 text-xs">{errors.whatsapp_number}</span>}
-                            </div>
-                        </div>
-
-                        <div className="mt-8 flex justify-end">
-                            <button 
-                                onClick={submitIdentity}
-                                disabled={processing}
-                                className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
-                            >
-                                {processing ? 'Guardando...' : 'Actualizar Identidad'}
-                            </button>
-                        </div>
+                        )}
                     </div>
                 </div>
             </main>

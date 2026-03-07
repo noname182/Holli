@@ -102,7 +102,8 @@ Route::prefix('admin')->group(function () {
         Route::post('/configuraciones/password', [AccountController::class, 'updatePassword'])->name('admin.password.update');
         //Actulizar configuraciones
         Route::post('/configuraciones', [AccountController::class, 'update'])->name('admin.settings.update');
-        
+        //cambiar el perfil
+        Route::put('/configuraciones/perfil', [AccountController::class, 'updateProfile'])->name('profile.update');
 
         // Listado principal
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');

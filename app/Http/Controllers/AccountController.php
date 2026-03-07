@@ -11,6 +11,8 @@ use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\DB;
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
@@ -28,39 +30,38 @@ class AccountController extends Controller
     // Actualiza los datos y maneja la imagen del QR
     public function updatePassword(Request $request)
     {
-        // 2. Validación: aseguramos que lleguen todos los campos necesarios
+        // 1. Validación estándar
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|min:8|confirmed', // 'confirmed' obliga a que llegue 'new_password_confirmation' igual
+            'new_password' => 'required|min:8|confirmed',
         ]);
 
-        // 3. Obtenemos el usuario autenticado (asumiendo que es el admin)
+        // 2. Obtener el admin actual
         $user = auth()->user(); 
 
-        // 4. EL PASO CLAVE: Verificación de la Contraseña Actual
-        // Usamos Hash::check para comparar lo que el admin escribió contra lo que está encriptado en la DB.
-        // Esta función sabe cómo lidiar con el Hash sin desencriptarlo.
+        // 3. Verificar clave actual
         if (!Hash::check($request->current_password, $user->password)) {
-            // Si no coinciden, devolvemos un error al formulario
             return back()->withErrors(['current_password' => 'La contraseña actual no es correcta.']);
         }
 
-        // 5. Actualización con Encriptación:
-        // Si la clave actual era correcta, encriptamos la NUEVA usando Hash::make.
-        $user->update([
-            'password' => Hash::make($request->new_password) // 👈 Guardamos la nueva clave de forma segura
-        ]);
+        // 4. EL PASO DEFINITIVO: 
+        // Buscamos al admin por su ID usando tu modelo específico
+        $admin = \App\Models\AdminAccount::find($user->id); 
+        
+        // 5. Asignación directa y guardado
+        $admin->password = Hash::make($request->new_password);
+        $admin->save(); 
 
-        // 6. Redireccionamos de vuelta con un mensaje de éxito
+        // 6. Refrescar la sesión para evitar que te saque del sistema
+        auth()->login($admin);
+
         return back()->with('message', 'La contraseña ha sido actualizada correctamente.');
     }
-
     public function update(Request $request)
     {
         return DB::transaction(function () use ($request) {
             $account = Account::first();
 
-            // 1. PROCESAR LOGO (600x600 WebP)
             if ($request->hasFile('logo_image')) {
                 try {
                     $file = $request->file('logo_image');
@@ -80,15 +81,10 @@ class AccountController extends Controller
                 }
             }
 
-            // 2. PROCESAR QR (600x600 WebP)
             if ($request->hasFile('qr_image')) {
                 try {
                     $file = $request->file('qr_image');
                     
-                    // ❌ QUITAMOS: cover(600, 600) -> causa distorsión al estirar o encoger píxeles.
-                    // ❌ QUITAMOS: toWebp(75) -> la compresión al 75% borra los bordes del QR.
-                    
-                    // ✅ PROPUESTA: Solo convertir a PNG sin cambiar tamaño para mantener la rejilla exacta.
                     $img = Image::read($file)->toPng(); 
                     $base64Image = "data:image/png;base64," . base64_encode((string)$img);
 
@@ -107,16 +103,44 @@ class AccountController extends Controller
                     \Log::error('Error Cloudinary QR: ' . $e->getMessage());
                 }
             }
-            // 3. ACTUALIZAR TEXTOS (BNB y WhatsApp)
             $account->update([
                 'owner_name' => $request->owner_name,
                 'bank_name' => $request->bank_name,
                 'account_number' => $request->account_number,
-                'account_type' => $request->account_type,
+                'account_type'    => $request->account_type ?? $account->account_type,
                 'whatsapp_number' => $request->whatsapp_number,
             ]);
 
             return back()->with('message', 'Configuraciones actualizadas con éxito');
         });
+    }
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        // 1. Validación estricta para MariaDB
+        $request->validate([
+            'username' => [
+                'required', 
+                'string', 
+                'max:255', 
+                Rule::unique('admin_accounts')->ignore($user->id)
+            ],
+            'email' => [
+                'required', 
+                'email', 
+                'max:255', 
+                Rule::unique('admin_accounts')->ignore($user->id)
+            ],
+        ]);
+
+        // 2. Actualización de los datos del administrador
+        $user->update([
+            'username' => $request->username,
+            'email' => $request->email,
+        ]);
+
+        // 3. Retorno con mensaje de éxito para Inertia
+        return back()->with('message', 'Perfil de administrador actualizado con éxito.');
     }
 }

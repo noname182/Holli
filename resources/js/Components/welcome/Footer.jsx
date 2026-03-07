@@ -99,11 +99,7 @@ export default function Footer() {
           <p className="text-gray-500 text-xs">
             © {new Date().getFullYear()} <span className="text-white font-bold">HOLLI</span>. Todos los derechos reservados.
           </p>
-          <div className="flex gap-6 text-gray-500 text-xs uppercase tracking-tighter">
-              <a href="#" className="hover:text-white transition">Privacidad</a>
-              <a href="#" className="hover:text-white transition">Términos</a>
-              <a href="#" className="hover:text-white transition">Bolivia</a>
-          </div>
+         
         </div>
       </div>
     </footer>
