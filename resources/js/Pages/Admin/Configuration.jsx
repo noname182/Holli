@@ -248,8 +248,8 @@ export default function Configuration({ account, auth }) {
                                             <label className="text-[12px] font-black uppercase text-gray-500 ml-1 tracking-wider">
                                                 WhatsApp de Pedidos
                                             </label>
-                                            <p className="text-[10px] font-bold text-purple-400 ml-1 uppercase italic leading-tight">
-                                                * Ingresa solo números, sin letras ni signos (ej: 59170000000)
+                                            <p className="text-[12px] font-bold text-purple-400 ml-1 uppercase italic leading-tight">
+                                                * Ingresa el numero de whatsaap junto con el codigo internacion, ,sin letras ni signos (ej: 59170000000)
                                             </p>
                                         </div>
                                         
