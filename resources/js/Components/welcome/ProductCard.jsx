@@ -32,19 +32,23 @@ export default function ProductCard({ variant }) {
     };
 
     const confirmAdd = () => {
-        if (quantity > stockMaximo || stockMaximo === 0) return; // Protección final
+        if (quantity > stockMaximo || stockMaximo === 0) return;
 
         const itemParaElCarrito = {
             id: variant.id,
             name: displayName,
             price: variant.price,
             image: imageUrl,
-            quantity: quantity,
         };
 
         addToCart(itemParaElCarrito, quantity);
+        
+        // 💡 Tip: Cerrar el modal y quizás mostrar una notificación pequeña
         setIsModalOpen(false);
-        setQuantity(1); 
+        setQuantity(1);
+        
+        // Opcional: Redirigir al carrito automáticamente si quieres evitar el paso extra
+        // router.visit(route('cart.index')); 
     };
 
     return (

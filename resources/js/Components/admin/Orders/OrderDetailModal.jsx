@@ -142,9 +142,22 @@ export default function OrderDetailModal({ order, type, close }) {
                             <p className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">🛒 Resumen de Compra</p>
                             <div className="bg-white rounded-[30px] border border-gray-100 overflow-hidden shadow-sm">
                                 {order.items?.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between items-center p-5 border-b border-gray-50 last:border-none">
-                                        <span className="text-sm font-bold text-gray-800">{item.quantity}x {item.variant?.product?.name || 'Producto'}</span>
-                                        <span className="text-sm font-black text-[#008542]">{item.subtotal} BOB</span>
+                                    <div key={idx} className="flex justify-between items-center p-5 border-b border-gray-50 last:border-none hover:bg-gray-50 transition-colors">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">
+                                                {item.quantity}x {item.variant?.product?.name || 'Producto'}
+                                            </span>
+                                            {item.variant?.weight && (
+                                                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                                                    Formato: {item.variant.weight >= 1000 
+                                                        ? `${(item.variant.weight / 1000)} kg` 
+                                                        : `${item.variant.weight} g`}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-sm font-black text-[#008542] bg-green-50 px-3 py-1 rounded-full">
+                                            {item.subtotal} BOB
+                                        </span>
                                     </div>
                                 ))}
                                 <div className="bg-gray-900 p-5 flex justify-between items-center text-white">

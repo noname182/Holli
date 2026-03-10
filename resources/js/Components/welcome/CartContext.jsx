@@ -104,6 +104,7 @@ export default function Cart() {
                                     <div className="h-px bg-gray-100 w-full my-4" />
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-800 font-black text-lg">Total</span>
+                                       
                                         <span className="text-3xl font-black text-[#008542]">{total.toFixed(2)} BOB</span>
                                     </div>
                                 </div>

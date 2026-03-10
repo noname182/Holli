@@ -1,115 +1,109 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 
 const CartContext = createContext(null);
 export const useCart = () => useContext(CartContext);
 
-
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedCart = sessionStorage.getItem('holli_cart'); 
-      return savedCart ? JSON.parse(savedCart) : [];
-    }
-    return [];
-  });
+    const [cart, setCart] = useState([]);
+    const [isInitialized, setIsInitialized] = useState(false);
 
-
-  useEffect(() => {
-      sessionStorage.setItem('holli_cart', JSON.stringify(cart));
-      window.dispatchEvent(new Event("cart-updated"));
-  }, [cart]);
-
-//  useEffect(() => {
-//    console.log("CART CONTENXT para ver que hay en el disco al cargar la app: Carga inicial desde LocalStorage:", cart);
-//  }, []);
-
-  useEffect(() => {
-      localStorage.setItem('holli_cart', JSON.stringify(cart));
-      
-      window.dispatchEvent(new Event("cart-updated"));
-      
-  }, [cart]);
-
-  const addToCart = (product, quantity) => {
-      setCart(prevCart => {
-          const existingIndex = prevCart.findIndex(item => item.id === product.id);
-          let updatedCart;
-
-          if (existingIndex >= 0) {
-              updatedCart = [...prevCart]; 
-              updatedCart[existingIndex] = {
-                  ...updatedCart[existingIndex],
-                  quantity: updatedCart[existingIndex].quantity + (quantity || 1)
-              };
-          } else {
-              updatedCart = [...prevCart, { ...product, quantity: (quantity || 1) }];
+    // 1. Carga inicial: Solo una vez al abrir la web
+    useEffect(() => {
+      // Función para leer el disco y actualizar el estado de React
+      const sincronizarTodo = () => {
+          const saved = sessionStorage.getItem('holli_cart');
+          if (saved) {
+              const parsed = JSON.parse(saved);
+              setCart(parsed);
           }
-          
-          return updatedCart;
-      });
-  };
+      };
 
-  const cartCount = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
-  const total = cart.reduce((acc, item) => acc + (item.price * (item.quantity || 0)), 0);
-
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity < 1) return;
-
-    setCart(prevCart => {
-      let currentCart = prevCart.length > 0 ? prevCart : JSON.parse(localStorage.getItem('holli_cart') || '[]');
+      // 1. Escuchar cambios manuales de otras pestañas o componentes
+      window.addEventListener('cart-updated', sincronizarTodo);
       
-      const updated = currentCart.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      );
+      // 2. 💡 EL SECRETO PARA INERTIA: Escuchar cuando la navegación termina
+      // Esto se dispara cada vez que cambias de página con <Link> o router.visit
+      document.addEventListener('inertia:finish', sincronizarTodo);
 
-      return updated;
-    });
-  };
+      return () => {
+          window.removeEventListener('cart-updated', sincronizarTodo);
+          document.removeEventListener('inertia:finish', sincronizarTodo);
+      };
+    }, []);
 
-  const removeFromCart = (id) => {
-    
-    setCart(prevCart => {
-      const currentCart = prevCart.length > 0 
-        ? prevCart 
-        : JSON.parse(localStorage.getItem('holli_cart') || '[]');
-      
-      const updated = currentCart.filter(item => item.id !== id);
-      
-      return updated;
-    });
-  };
+    // 2. Persistencia Automática: Cada vez que 'cart' cambie, se guarda en disco
+    useEffect(() => {
+        if (isInitialized) {
+            sessionStorage.setItem('holli_cart', JSON.stringify(cart));
+            // Sincronización para componentes que no usan Context (opcional)
+            window.dispatchEvent(new Event("cart-updated"));
+        }
+    }, [cart, isInitialized]);
 
-  const clearCart = () => {
-    setCart([]); // Al ser un array vacío intencional, esto activará el useEffect y limpiará el disco
-  };
+    // Cálculos automáticos
+    const total = useMemo(() => 
+        cart.reduce((acc, item) => acc + (parseFloat(item.price || 0) * item.quantity), 0)
+    , [cart]);
 
-  const finalizarPedido = () => {
-      const numeroWhatsApp = "591XXXXXX"; // Tu número de Bolivia con código de país
-      
-      // Formateamos la lista de productos
-      const productosTexto = cart.map(item => 
-          `- ${item.quantity}x ${item.name} (${(item.price * item.quantity).toFixed(2)} BOB)`
-      ).join('\n');
+    const cartCount = useMemo(() => 
+        cart.reduce((acc, item) => acc + (parseInt(item.quantity) || 0), 0)
+    , [cart]);
 
-      const mensaje = encodeURIComponent(
-          `¡Hola Holli! 🐾\n\nQuiero realizar el siguiente pedido:\n${productosTexto}\n\n*Total: ${total.toFixed(2)} BOB*\n\n¿Me ayudan con la entrega?`
-      );
+    // Funciones Globales
+    const addToCart = (product, quantity = 1) => {
+        setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            let newCart;
 
-      window.open(`https://wa.me/${numeroWhatsApp}?text=${mensaje}`, '_blank');
-  };
-  const totalItems = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
-  return (
-    <CartContext.Provider value={{ 
-      cart, 
-      cartCount, 
-      total, 
-      totalItems,
-      addToCart, 
-      removeFromCart, 
-      updateQuantity, 
-      clearCart
-    }}>
-      {children}
-    </CartContext.Provider>
-  );
+            if (existing) {
+                newCart = prev.map(item => 
+                    item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+                );
+            } else {
+                newCart = [...prev, { ...product, quantity }];
+            }
+
+            // 💡 SECRETO: Guardamos en disco en el mismo instante del clic
+            // Esto elimina el "atraso" al navegar.
+            sessionStorage.setItem('holli_cart', JSON.stringify(newCart));
+            window.dispatchEvent(new Event("cart-updated"));
+            
+            return newCart;
+        });
+    };
+
+    const updateQuantity = (id, newQty) => {
+        if (newQty < 1) return;
+        
+        setCart(prev => {
+            const updated = prev.map(item => 
+                item.id === id ? { ...item, quantity: newQty } : item
+            );
+            
+            // ✅ SOLUCIÓN: Usamos setTimeout para que la escritura ocurra 
+            // DESPUÉS de que React termine de renderizar el componente.
+            setTimeout(() => {
+                sessionStorage.setItem('holli_cart', JSON.stringify(updated));
+                window.dispatchEvent(new Event("cart-updated"));
+            }, 0);
+
+            return updated;
+        });
+    };
+
+    const removeFromCart = (id) => {
+        setCart(prev => {
+            const updated = prev.filter(item => item.id !== id);
+            // 🚀 FORZAMOS la escritura inmediata
+            sessionStorage.setItem('holli_cart', JSON.stringify(updated));
+            window.dispatchEvent(new Event("cart-updated"));
+            return updated;
+        });
+    };
+
+    return (
+        <CartContext.Provider value={{ cart, cartCount, total, addToCart, updateQuantity, removeFromCart, setCart }}>
+            {children}
+        </CartContext.Provider>
+    );
 };

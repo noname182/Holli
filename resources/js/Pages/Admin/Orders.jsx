@@ -103,39 +103,74 @@ export default function Orders({ orders, currentType }) {
 
                 {/* --- VISTA DE ESCRITORIO (TABLA) --- */}
                 <div className="hidden md:block bg-white rounded-[40px] shadow-xl border border-white overflow-hidden">
-                    <table className="w-full text-left">
+                    <table className="w-full text-left table-fixed"> {/* table-fixed ayuda a mantener anchos constantes */}
                         <thead>
-                            <tr className="bg-gray-50/50">
-                                <th className="p-6 text-[13px] font-black uppercase tracking-[0.2em] text-gray-400">{currentType === 'personalizado' ? 'Tutor' : 'Cliente'}</th>
-                                <th className="p-6 text-[13px] font-black uppercase tracking-[0.2em] text-gray-400">{currentType === 'personalizado' ? 'Mascota' : 'Monto Total'}</th>
-                                <th className="p-6 text-[13px] font-black uppercase tracking-[0.2em] text-gray-400">Estado</th>
-                                <th className="p-6 text-[13px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Acciones</th>
+                            <tr className="bg-gray-50/50 border-b border-gray-100">
+                                <th className="w-[10%] p-6 text-[11px] font-black uppercase tracking-widest text-gray-400">ID</th>
+                                <th className="w-[30%] p-6 text-[11px] font-black uppercase tracking-widest text-gray-400">Cliente</th>
+                                <th className="w-[20%] p-6 text-[11px] font-black uppercase tracking-widest text-gray-400">Monto Total</th>
+                                <th className="w-[20%] p-6 text-[11px] font-black uppercase tracking-widest text-gray-400">Estado</th>
+                                <th className="w-[20%] p-6 text-[11px] font-black uppercase tracking-widest text-gray-400 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {orders.data.map(order => (
-                                <tr key={order.id} className="hover:bg-green-50/30 transition-all">
-                                    <td className="p-6 text-[18px] font-bold text-gray-800">
-                                        {currentType === 'personalizado' ? order.tutor_name : order.customer_name}
-                                    </td>
-                                    <td className="p-6 font-black text-[#008542]">
-                                        {currentType === 'personalizado' ? `🐾 ${order.pet_name}` : `${order.total} BOB`}
-                                    </td>
+                                <tr key={order.id} className="hover:bg-green-50/10 transition-all">
+                                    {/* 1. ID */}
                                     <td className="p-6">
-                                        <select 
-                                            value={order.status_id || order.status} 
-                                            onChange={(e) => updateStatus(order.id, e.target.value)}
-                                            className="border-none rounded-full px-6 pr-10 py-2 text-[14px] font-black uppercase appearance-none bg-amber-100 text-amber-700 shadow-sm"
-                                        >
-                                            <option value="1">Pendiente</option>
-                                            <option value="2">Pagado</option>
-                                            <option value="3">Enviado</option>
-                                        </select>
+                                        <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-lg font-mono text-xs font-bold">
+                                            #{order.id}
+                                        </span>
                                     </td>
+
+                                    {/* 2. NOMBRE */}
                                     <td className="p-6">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button onClick={() => {setSelectedOrder(order); setShowModal(true)}} className="bg-gray-50 hover:bg-[#008542] hover:text-white px-5 py-2 rounded-xl text-[14px] font-black uppercase transition-all">Ver Detalle</button>
-                                            <button onClick={() => openDeleteModal(order)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={20} /></button>
+                                        <p className="text-[16px] font-bold text-gray-800 capitalize truncate">
+                                            {currentType === 'personalizado' ? order.tutor_name : order.customer_name}
+                                        </p>
+                                    </td>
+
+                                    {/* 3. MONTO */}
+                                    <td className="p-6">
+                                        <p className="font-black text-[#008542] text-[16px]">
+                                            {parseFloat(order.total).toFixed(2)} BOB
+                                        </p>
+                                    </td>
+
+                                    {/* 4. ESTADO */}
+                                    <td className="p-6">
+                                        <div className="relative inline-block w-full max-w-[140px]">
+                                            <select 
+                                                value={order.status_id} 
+                                                onChange={(e) => updateStatus(order.id, e.target.value)}
+                                                className="w-full border-none rounded-full pl-4 pr-8 py-2 text-[11px] font-black uppercase appearance-none bg-amber-100 text-amber-700 cursor-pointer focus:ring-2 focus:ring-amber-200"
+                                            >
+                                                <option value="1">Pendiente</option>
+                                                <option value="2">Pagado</option>
+                                                <option value="3">Enviado</option>
+                                            </select>
+                                            {/* Icono de flechita para el select personalizado */}
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-amber-700">
+                                                <svg className="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {/* 5. ACCIONES */}
+                                    <td className="p-6 text-center">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <button 
+                                                onClick={() => {setSelectedOrder(order); setShowModal(true)}} 
+                                                className="bg-gray-50 hover:bg-[#008542] hover:text-white px-4 py-2 rounded-xl text-[11px] font-black uppercase transition-all shadow-sm border border-gray-100"
+                                            >
+                                                Ver Detalle
+                                            </button>
+                                            <button 
+                                                onClick={() => openDeleteModal(order)} 
+                                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -150,6 +185,9 @@ export default function Orders({ orders, currentType }) {
                         <div key={order.id} className="bg-white p-6 rounded-[30px] shadow-md border border-gray-100">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
+                                    <span className="text-[10px] font-bold text-[#008542] bg-green-50 px-2 py-0.5 rounded-md mb-1 inline-block">
+                                        ORDEN #{order.id}
+                                    </span>
                                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
                                         {currentType === 'personalizado' ? 'Tutor' : 'Cliente'}
                                     </p>

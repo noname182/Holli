@@ -9,7 +9,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { url, props } = usePage();
-  const { totalItems } = useCart(); 
+  const { cartCount } = useCart(); 
 
   const appConfig = props['app_config'] || {};
   const accountData = appConfig['account'] || null;
@@ -43,9 +43,9 @@ export default function Header() {
             {/* Carrito al extremo izquierdo del bloque de 550px */}
             <Link href={route('cart.index')} className="relative p-2 text-gray-700 hover:text-[#008542]">
               <ShoppingCart size={28} strokeWidth={1.5} />
-              {totalItems > 0 && (
+              {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-[#008542] text-white text-[10px] font-bold h-[18px] w-[18px] flex items-center justify-center rounded-full border-2 border-white">
-                  {totalItems}
+                  {cartCount}
                 </span>
               )}
             </Link>

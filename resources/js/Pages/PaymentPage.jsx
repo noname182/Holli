@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/Layouts/MainLayout';
 import { Head, router } from '@inertiajs/react';
 import { useCart } from '@/Contexts/CartContext';
 import { QrCode, CreditCard, Send, User, ChevronRight, ArrowLeft, ChartNoAxesColumnIcon } from 'lucide-react';
 
 export default function PaymentPage({ cuenta }) {
-    const { cart } = useCart();
-    const [step, setStep] = useState(1); // 1: Datos, 2: Pago
+    const { cart, total: contextTotal } = useCart();
+    const [totalReal, setTotalReal] = useState("0.00");
+    const [step, setStep] = useState(1); 
     const [method, setMethod] = useState('qr');
     const [isZoomed, setIsZoomed] = useState(false);
-    
+    useEffect(() => {
+        // Si el context ya tiene el total, lo usamos
+        if (contextTotal > 0) {
+            setTotalReal(contextTotal.toFixed(2));
+        } else {
+            // RESPALDO: Si el context está en 0 por el "flash" de navegación, 
+            // leemos directamente la sesión para no mostrar 0.00
+            const saved = JSON.parse(sessionStorage.getItem('holli_cart') || '[]');
+            const calculado = saved.reduce((acc, i) => acc + (parseFloat(i.price) * i.quantity), 0);
+            setTotalReal(calculado.toFixed(2));
+        }
+    }, [contextTotal, cart]);
     const [form, setForm] = useState({
         nombre: '',
         celular: '',
@@ -17,36 +29,42 @@ export default function PaymentPage({ cuenta }) {
         direccion: '',
         referencia: ''
     });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = !form.email || emailRegex.test(form.email);
     const isStep1Valid = () => {
         return (
             form.nombre?.trim().length > 2 &&
             form.celular?.trim().length >= 8 &&
-            form.direccion?.trim().length > 5
+            form.direccion?.trim().length > 5 &&
+            isEmailValid
         );
     };
     // Cálculo dinámico para evitar el error de "0 BOB"
-    const totalReal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0).toFixed(2);
-
+  
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
-
+    
     const [orderId, setOrderId] = useState(null);
-    // --- PASO 1: Guardar en Base de Datos ---
     const goToPayment = () => {
-        if (!form.nombre || !form.direccion || !form.celular) {
-            alert("Por favor, completa tus datos de entrega.");
+        let cartParaEnviar = cart;
+        
+        if (!cartParaEnviar || cartParaEnviar.length === 0) {
+            const saved = sessionStorage.getItem('holli_cart');
+            cartParaEnviar = saved ? JSON.parse(saved) : [];
+        }
+
+        if (cartParaEnviar.length === 0) {
+            alert("Tu carrito parece estar vacío. Por favor, intenta recargar la página.");
             return;
         }
 
-        // 💡 IMPORTANTE: Mapeo exacto para la tabla order_items
-        const cartMapeado = cart.map(item => ({
+        const cartMapeado = cartParaEnviar.map(item => ({
             variant_id: item.variant_id || item.id, 
             quantity: item.quantity,
-            price: item.price,
-            subtotal: (item.price * item.quantity).toFixed(2)
+            price: parseFloat(item.price).toFixed(2),
+            subtotal: (parseFloat(item.price) * item.quantity).toFixed(2)
         }));
-        
 
         router.post(route('orders.store'), {
             order_id: orderId,
@@ -55,43 +73,48 @@ export default function PaymentPage({ cuenta }) {
             customer_email: form.email,
             customer_address: form.direccion,
             customer_address_reference: form.referencia,
-            total: totalReal,
-            cart: cartMapeado 
+            total: totalReal, // Este valor ya lo tenemos sincronizado
+            cart: cartMapeado  // Enviamos el carrito recuperado forzosamente
         }, {
             onSuccess: (page) => {
                 const idRecibido = page.props.flash?.order_id;
-
                 if (idRecibido) {
                     setOrderId(idRecibido);
                 }
                 setStep(2);
             },
             onError: (err) => {
-                console.log("❌ Campos que fallaron:");
-                Object.keys(err).forEach(key => {
-                    console.error(`Línea defectuosa -> ${key}: ${err[key]}`);
-                });
+                console.error("❌ Falló el envío:", err);
             }
         });
     };
-    // --- PASO 2: Confirmar por WhatsApp ---
     const confirmWhatsApp = () => {
         const adminNumber = cuenta?.whatsapp_number || "59174618956"; 
         
-        const detalleProductos = cart.map(item => 
+       
+        let cartParaMensaje = cart;
+        if (cartParaMensaje.length === 0) {
+            const saved = sessionStorage.getItem('holli_cart');
+            cartParaMensaje = saved ? JSON.parse(saved) : [];
+        }
+
+        
+        const idFinal = orderId || "Pendiente"; 
+
+        const detalleProductos = cartParaMensaje.map(item => 
             `- ${item.quantity}x ${item.name}`
         ).join('\n');
 
+      
         const mensaje = encodeURIComponent(
-    `Hola, confirmo mi pago para la *Orden #${orderId}*:
+    `Hola, confirmo mi pago para la *Orden #${idFinal}*:
 
     *DETALLE:*
     ${detalleProductos}
 
     *TOTAL:* ${totalReal} BOB
-    en seguida mi comprobante de pago`
-    
-    );
+    En seguida envío mi comprobante de pago.`
+        );
 
         window.open(`https://wa.me/${adminNumber}?text=${mensaje}`, '_blank');
     };
@@ -162,7 +185,7 @@ export default function PaymentPage({ cuenta }) {
                                                 value={form.celular} 
                                             />
                                         </div>
-
+                                        
                                         {/* Total Visual */}
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Total a Pagar</label>
@@ -171,7 +194,7 @@ export default function PaymentPage({ cuenta }) {
                                             </div>
                                         </div>
                                     </div>
-
+                                    
                                     {/* Dirección */}
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase text-gray-700 ml-2">Dirección Exacta</label>
